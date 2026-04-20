@@ -1,0 +1,6 @@
+es para que las familias que deseen solicitar una entrevista para el ingreso a la escuela puedan rellenar una ficha de datos como la que te adjunto como muestra. No necesita  ser igual, pero si recabar esos datos. Como posiblemente muchos lo hagan a través del teléfono móvil, debería tener una estructura que les permita cargar esos datos fácilmente. Otras personas, seguramente lo harán directamente desde un navegador en la computadora.
+Se necesitaria, entonces, una interfaz para aquellas personas que deban cargar los datos de la ficha (familias de potenciales ingresantes) y luego enviarla a la escuela.
+Por otro lado, estaría la interfaz de quien recibe en la escuela, que pueda ver fácilmente los datos y contestar a la familia acerca de fecha y hora de entrevista y si requiere que envíen alguna otra documentación.
+a partir de coordinar una fecha, debe existir una agenda de entrevistas ordenada cronológicamente, que pueda cancelarse o modificarse y acceder a la ficha enviada y tomar notas de la reunión.
+
+admin

@@ -1,0 +1,16 @@
+name = "sistema-inscripciones"
+main = "src/index.ts"
+compatibility_date = "2024-04-16"
+
+[placement]
+mode = "smart"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "inscripciones_db"
+database_id = "reemplazar-con-id-de-d1"
+
+[vars]
+# El password de administrador (se puede sobrescribir en el dashboard de Cloudflare para mayor seguridad)
+ADMIN_PASSWORD = "admin"
+FRONTEND_URL = "http://localhost:5173" # Permitir CORS desde local (se cambia en prod)

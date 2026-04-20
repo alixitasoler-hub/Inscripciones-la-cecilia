@@ -1,0 +1,73 @@
+Veo la app muy elemental y le faltan cosas. 
+El diseño es muy insulso, debería tener un layout más profesional y atractivo.
+El sistema debe ser fácil de operar por personal administrativo y accesible para familias o responsables.
+La mecánica es:
+1) la familia accede al form de inscripción, lo completa y envía
+2) la administración recibe vía mail (laceciliasecretaria@gmail.com) un aviso de que hay una nueva solicitud de inscripción en la bandeja de entrada de la app
+3) la admin accede a la ficha y consulta en la agenda de la app dia/horario disponibles para entrevista (por defecto, de lunes a viernes de 8 a 15, aunque puede poder elegir otro)
+4) la app permite envíar una notificación vía whatsapp o email (segun el medio que haya elegido la familia como contacto) proponiendo el momento de la entrevista.
+5) la app permite registrar la respuesta que haya llegado por el medio elegido, como positiva y si es negativa o distinta, volcar eso en la agenda
+6) durante la entrevista (o si ella no se realiza) se deben poder tomar notas y agregarlas a la ficha
+7) debe poder registrarse si el/la alumno/a ingresará o no a la escuela
+4) el sistema
+________________________________________
+Objetivos del proyecto
+•	Digitalizar el proceso de inscripción.
+•	Reducir errores y duplicidad de datos.
+•	Permitir que los usuarios puedan cargar información desde cualquier dispositivo.
+•	Facilitar al personal la administración, consulta y exportación de inscriptos.
+•	Mantener una arquitectura ligera y fácil de mantener.
+________________________________________
+Usuarios del sistema
+Administrador
+•	Trabaja en la escuela.
+•	Puede ver, editar o eliminar inscripciones.
+•	Puede abrir/cerrar períodos de inscripción.
+•	Puede exportar listado en CSV/Excel.
+•	Puede gestionar parámetros del sistema (p. ej., cursos disponibles).
+Usuario externo (familia/responsable)
+•	Solo puede completar el formulario de inscripción.
+•	No necesita cuenta ni autenticación compleja.
+•	Recibe confirmación de su inscripción.
+________________________________________
+Panel de administración
+Funciones:
+•	Ver lista completa de inscriptos
+•	Buscar por nombre, apellido o DNI
+•	Filtrar por curso o nivel educativo
+•	Editar un registro existente
+•	Eliminar un registro
+•	Exportar inscriptos a CSV/Excel
+•	Ver estadísticas simples:
+o	Total inscriptos
+o	Inscripciones por curso
+o	Inscripciones por día
+________________________________________
+Requerimientos no funcionales
+•	Accesibilidad nivel AA.
+•	Interface minimalista y clara.
+•	Latencia baja (ideal en workers).
+•	Código fácil de mantener.
+•	Backup automático de base de datos.
+•	Seguridad:
+o	Sanitización de inputs
+o	No almacenar datos sensibles innecesarios
+o	CORS configurado
+o	Panel admin con contraseña
+________________________________________
+Flujo de uso
+Usuario externo
+1.	Entra a la URL pública (mediante pc o celular)
+2.	Ve formulario
+3.	Completa datos
+4.	Envía
+5.	Recibe mensaje de éxito
+6.	Registro queda en BD
+Administrador
+1.	Entra al panel admin
+2.	Ingresa contraseña
+3.	Ve tablero
+4.	Consulta/edita/exporta inscripciones
+5. 	Gestiona fecha/hora de entrevista y envía notificación a la familia.
+6.	Consulta/edita/borra datos de entrevista
+
