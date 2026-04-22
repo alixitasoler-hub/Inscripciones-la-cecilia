@@ -415,57 +415,104 @@ const DetalleFicha = ({ token }: { token: string }) => {
     <div className="animate-in">
       <style>{`
         @media print {
+          @page { margin: 1cm; size: portrait; }
           .no-print { display: none !important; }
-          body { background: white !important; font-size: 10pt !important; color: black !important; }
+          body { background: white !important; font-size: 9.5pt !important; color: #1e293b !important; }
           .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
-          .section-print { margin-bottom: 2rem; page-break-inside: avoid; border: 1.5px solid #1C3F60; }
-          .section-title-print { background: #1C3F60 !important; color: white !important; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; }
-          .grid-print { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding: 1.25rem; }
+          
+          .section-print { 
+            margin-bottom: 1.5rem; 
+            page-break-inside: avoid; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          
+          .section-title-print { 
+            background: #1C3F60 !important; 
+            color: white !important; 
+            padding: 0.5rem 1rem; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            font-size: 10pt;
+            letter-spacing: 0.05em;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          .grid-print { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 0.5rem 1rem; 
+            padding: 1rem; 
+          }
+          
           .full-print { grid-column: 1 / -1; }
-          h1 { font-size: 18pt; margin-bottom: 0.5rem; color: #1C3F60 !important; }
-          table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-          th, td { border: 1px solid #1C3F60; padding: 0.5rem; text-align: left; }
-          th { background: #F3F4F6 !important; }
+          
+          .print-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #1C3F60;
+            padding-bottom: 1rem;
+          }
+          
+          .header-text { text-align: right; }
+          
+          h1 { font-size: 18pt; margin: 0; color: #1C3F60 !important; font-weight: 800; }
+          
+          table { width: 100%; border-collapse: collapse; margin-top: 0; }
+          th, td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
+          th { background: #f8fafc !important; font-weight: 700; color: #64748b; font-size: 8pt; text-transform: uppercase; -webkit-print-color-adjust: exact; }
+          
+          .badge-print {
+            padding: 0.2rem 0.5rem;
+            border: 1px solid #1C3F60;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 8pt;
+          }
         }
       `}</style>
 
-      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', background: 'white', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', position: 'sticky', top: 'var(--header-height)', zIndex: 10 }}>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', background: 'white', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', position: 'sticky', top: 'var(--header-height)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
+        <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn btn-outline" onClick={() => navigate('/admin')}>
-            <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} /> Volver
+             <ArrowLeft size={18} /> Volver
           </button>
           <button className="btn btn-primary" onClick={handlePrint}>
-            <Printer size={18} /> Imprimir / PDF
+            <Printer size={18} /> Generar PDF / Imprimir
           </button>
         </div>
         
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {waLink && <a href={waLink} target="_blank" rel="noreferrer" className="btn btn-accent" style={{ background: '#25D366' }}><MessageCircle size={18} /> Contactar WhatsApp</a>}
-          {mailLink && <a href={mailLink} className="btn btn-accent" style={{ background: '#3B82F6' }}><Mail size={18} /> Enviar Email</a>}
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {waLink && <a href={waLink} target="_blank" rel="noreferrer" className="btn btn-accent" style={{ background: '#25D366' }}><MessageCircle size={18} /> WhatsApp</a>}
+          {mailLink && <a href={mailLink} className="btn btn-accent" style={{ background: '#3B82F6' }}><Mail size={18} /> Correo</a>}
         </div>
       </div>
 
       <div id="print-area">
-        <header style={{textAlign: 'center', marginBottom: '3rem'}}>
-          <h1 style={{textTransform: 'uppercase', letterSpacing: '0.05em'}}>Ficha de Inscripción</h1>
-          <p style={{ fontWeight: 600, color: 'var(--text-muted)' }}>LA CECILIA - Escuela de la Nueva Cultura</p>
-          <div style={{ marginTop: '1rem', display: 'inline-block', padding: '0.5rem 1.5rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}>
-            CICLO LECTIVO: {data.ficha.ciclo_lectivo}
+        <header className="print-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <img src="/logo.png" alt="Logo La Cecilia" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+            <div>
+              <h1 style={{ lineHeight: 1 }}>Ficha de Inscripción</h1>
+              <p style={{ fontWeight: 700, color: '#64748b', fontSize: '9pt', marginTop: '0.25rem' }}>LA CECILIA - Escuela de la Nueva Cultura</p>
+            </div>
           </div>
-          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>Fecha de Emisión: {new Date().toLocaleDateString()}</p>
+          <div className="header-text">
+            <div className="badge-print">CICLO LECTIVO {data.ficha.ciclo_lectivo}</div>
+            <p style={{ marginTop: '0.5rem', fontSize: '8pt', color: '#64748b' }}>Ficha N°: {data.ficha.id.toString().padStart(6, '0')} <br/> Emisión: {new Date().toLocaleDateString()}</p>
+          </div>
         </header>
 
-        {/* RESUMEN ADMINISTRATIVO - SOLO VISIBLE EN PANTALLA O ARRIBA EN PRINT */}
-        <div className="no-print card" style={{ background: 'var(--bg-main)', border: '1px solid var(--primary)', marginBottom: '2.5rem', padding: '1.5rem' }}>
+        {/* RESUMEN ADMINISTRATIVO - SOLO VISIBLE EN PANTALLA */}
+        <div className="no-print card" style={{ background: 'white', border: '1px solid #e2e8f0', marginBottom: '2.5rem', padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
+          <h4 style={{fontSize: '0.875rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem'}}>Gestión de Solicitud</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
             <div>
-              <label className="form-label">Estado de la Solicitud</label>
-              <select 
-                className="form-select" 
-                value={data.ficha.estado} 
-                disabled={savingStatus}
-                onChange={e => updateFicha({ estado: e.target.value })}
-              >
+              <label className="form-label">Estado</label>
+              <select className="form-select" value={data.ficha.estado} disabled={savingStatus} onChange={e => updateFicha({ estado: e.target.value })}>
                 <option value="pendiente">Pendiente</option>
                 <option value="contactado">Contactado</option>
                 <option value="entrevista_programada">Entrevista Programada</option>
@@ -474,15 +521,14 @@ const DetalleFicha = ({ token }: { token: string }) => {
               </select>
             </div>
             <div>
-              <label className="form-label">Decisión Final</label>
+              <label className="form-label">Resolución</label>
               <select 
                 className="form-select" 
                 value={data.ficha.decision_final || ''} 
                 disabled={savingStatus}
-                style={{ borderColor: data.ficha.decision_final === 'ingresa' ? 'var(--success)' : (data.ficha.decision_final === 'no_ingresa' ? 'var(--error)' : 'var(--border-color)') }}
                 onChange={e => updateFicha({ decision_final: e.target.value })}
               >
-                <option value="">Pendiente de Decisión</option>
+                <option value="">Pendiente</option>
                 <option value="ingresa">✔️ INGRESARÁ</option>
                 <option value="no_ingresa">❌ NO INGRESARÁ</option>
                 <option value="espera">⏳ LISTA DE ESPERA</option>
@@ -490,116 +536,120 @@ const DetalleFicha = ({ token }: { token: string }) => {
             </div>
             <div>
               <label className="form-label">DNI Alumno</label>
-              <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{data.ficha.dni_nro}</div>
+              <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)' }}>{data.ficha.dni_nro}</div>
             </div>
           </div>
         </div>
 
         {/* ALUMNO */}
-        <section className="section-print animate-in" style={{marginBottom: '2.5rem'}}>
+        <section className="section-print animate-in">
           <h3 className="section-title-print">I. Datos del Alumno</h3>
           <div className="grid-print">
-            <p className="full-print"><strong>Nombre Completo:</strong> {data.ficha.apellido}, {data.ficha.nombre}</p>
+            <p className="full-print"><strong>Nombre Completo:</strong> <span style={{fontSize: '11pt', fontWeight: 700}}>{data.ficha.apellido}, {data.ficha.nombre}</span></p>
             <p><strong>Documento:</strong> {data.ficha.dni_tipo} {data.ficha.dni_nro}</p>
-            <p><strong>Sexo:</strong> {data.ficha.sexo}</p>
-            <p><strong>Fecha de Nacimiento:</strong> {data.ficha.fecha_nac}</p>
-            <p><strong>Lugar de Nacimiento:</strong> {data.ficha.lugar_nac}</p>
-            <p className="full-print"><strong>Dirección:</strong> {data.ficha.direccion}, {data.ficha.localidad} ({data.ficha.cp}) - {data.ficha.provincia}</p>
+            <p><strong>Sexo:</strong> {data.ficha.sexo || '-'}</p>
+            <p><strong>Fecha de Nacimiento:</strong> {data.ficha.fecha_nac || '-'}</p>
+            <p><strong>Lugar de Nacimiento:</strong> {data.ficha.lugar_nac || '-'}</p>
+            <p className="full-print"><strong>Domicilio:</strong> {data.ficha.direccion}, {data.ficha.localidad} ({data.ficha.cp || '-'}) - {data.ficha.provincia}</p>
             <p><strong>Nivel a Ingresar:</strong> {data.ficha.nivel_ingreso}</p>
             <p><strong>Grado/Año:</strong> {data.ficha.grado_anio} {data.ficha.repitente ? '(Repitente)' : ''}</p>
-            <p className="full-print"><strong>Observaciones de Nivel:</strong> {data.ficha.observaciones_level || '-'}</p>
             
-            <div className="full-print" style={{marginTop: '0.75rem', padding: '1rem', background: '#F8FAFC', border: '1px dashed var(--primary)' }}>
-                <p style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.8125rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Información de Contacto para Entrevista</p>
-                <p><strong>Responsable:</strong> {data.ficha.contacto_entrevista_nombre} | <strong>Medio:</strong> {data.ficha.contacto_entrevista_medio} | <strong>Dato:</strong> {data.ficha.contacto_entrevista_dato}</p>
+            <div className="full-print" style={{marginTop: '0.5rem', padding: '0.75rem', background: '#f8fafc', border: '1px dashed #1c3f60' }}>
+                <p style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '7.5pt', color: '#1c3f60', marginBottom: '0.25rem' }}>Contacto para Entrevista</p>
+                <p><strong>{data.ficha.contacto_entrevista_nombre}</strong> | {data.ficha.contacto_entrevista_medio}: <span style={{fontWeight: 700}}>{data.ficha.contacto_entrevista_dato}</span></p>
             </div>
           </div>
         </section>
 
         {/* ESCOLARIDAD */}
-        <section className="section-print animate-in" style={{marginBottom: '2.5rem'}}>
-          <h3 className="section-title-print">II. Escolaridad Previa</h3>
-          <div style={{ padding: '1rem' }}>
-            <table className="admin-table">
-              <thead><tr><th>Nivel</th><th>Escuela / Institución</th><th>Año</th><th>Observaciones</th></tr></thead>
+        <section className="section-print animate-in">
+          <h3 className="section-title-print">II. Antecedentes Escolares</h3>
+          <div>
+            <table className="admin-table" style={{ border: 'none' }}>
+              <thead><tr><th>Grado / Nivel</th><th>Institución / Escuela</th><th>Año(s)</th></tr></thead>
               <tbody>
-                {data.escolaridad.map((e: any, i: number) => (
-                  <tr key={i}><td>{e.nivel}</td><td>{e.escuela}</td><td>{e.anio_cursado}</td><td>{e.observaciones}</td></tr>
-                ))}
-                {data.escolaridad.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center' }}>No registra escolaridad previa.</td></tr>}
+                {data.escolaridad.length > 0 ? data.escolaridad.map((e: any, i: number) => (
+                  <tr key={i}>
+                    <td style={{fontWeight: 700}}>{e.nivel}</td>
+                    <td>{e.escuela}</td>
+                    <td>{e.anio_cursado}</td>
+                  </tr>
+                )) : <tr><td colSpan={3} style={{ textAlign: 'center', padding: '1rem', color: '#94a3b8' }}>No se registra escolaridad previa.</td></tr>}
               </tbody>
             </table>
           </div>
         </section>
 
         {/* PADRES */}
-        <section className="section-print animate-in" style={{marginBottom: '2.5rem'}}>
-          <h3 className="section-title-print">III. Padres / Tutores Responsables</h3>
+        <section className="section-print animate-in">
+          <h3 className="section-title-print">III. Responsables / Tutores</h3>
           {data.padres.map((p: any, i: number) => (
-            <div key={i} style={{ borderBottom: i < data.padres.length - 1 ? '1px solid #1C3F60' : 'none', padding: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <p className="full-print"><strong>{p.rol || 'Responsable'}:</strong> {p.apellido}, {p.nombre} (DNI: {p.dni_nro})</p>
-                <p><strong>Estado Civil:</strong> {p.estado_civil}</p>
-                <p><strong>Nacimiento:</strong> {p.fecha_nac} ({p.lugar_nac_datos})</p>
-                <p className="full-print"><strong>Domicilio:</strong> {p.domicilio_datos}</p>
+            <div key={i} style={{ borderBottom: i < data.padres.length - 1 ? '1px solid #cbd5e1' : 'none', padding: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem' }}>
+                <p className="full-print"><strong>{p.rol || 'Responsable'}:</strong> <span style={{fontWeight: 700}}>{p.apellido}, {p.nombre}</span> (DNI: {p.dni_nro})</p>
+                <p><strong>Estado Civil:</strong> {p.estado_civil || '-'}</p>
                 <p><strong>Celular:</strong> {p.celular}</p>
-                <p><strong>Email:</strong> {p.email}</p>
-                <p className="full-print"><strong>Labor:</strong> {p.profesion_ocupacion} en {p.empresa_laboral || 'N/A'}</p>
+                <p className="full-print"><strong>Domicilio:</strong> {p.domicilio_datos}</p>
+                <p className="full-print"><strong>Email:</strong> {p.email || '-'}</p>
+                <p className="full-print"><strong>Ocupación:</strong> {p.profesion_ocupacion} {p.empresa_laboral ? `en ${p.empresa_laboral}` : ''}</p>
               </div>
             </div>
           ))}
         </section>
 
-        {/* SALUD Y OTROS */}
-        <section className="section-print animate-in" style={{marginBottom: '2.5rem'}}>
-          <h3 className="section-title-print">IV. Otros Antecedentes</h3>
+        {/* SALUD */}
+        <section className="section-print animate-in">
+          <h3 className="section-title-print">IV. Salud y Actividades</h3>
           <div className="grid-print">
-            <p className="full-print"><strong>Detalles de Salud:</strong> {data.ficha.salud_detalles || '-'}</p>
+            <p className="full-print"><strong>Salud:</strong> {data.ficha.salud_detalles || '-'}</p>
             <p><strong>Obra Social:</strong> {data.ficha.obra_social || 'No posee'}</p>
-            <p><strong>Discapacidad:</strong> {data.ficha.discapacidad || 'No'} {data.ficha.tiene_cud ? '(Posee CUD)' : ''}</p>
-            <p className="full-print"><strong>Problemáticas de Aprendizaje:</strong> {data.ficha.problemas_aprendizaje || '-'}</p>
-            <p className="full-print"><strong>Motivo de Elección:</strong> {data.ficha.motivo_eleccion || '-'}</p>
+            <p><strong>Discapacidad:</strong> {data.ficha.tiene_cud ? 'SI (Posee CUD)' : 'NO'}</p>
+            <p className="full-print"><strong>Otras Actividades:</strong> {data.ficha.otras_actividades || '-'}</p>
           </div>
         </section>
 
-        {/* FAMILIA */}
-        <section className="section-print animate-in" style={{marginBottom: '2.5rem'}}>
-          <h3 className="section-title-print">V. Grupo Familiar</h3>
-          <div style={{ padding: '1.25rem' }}>
-             <p style={{ marginBottom: '1rem' }}><strong>Situación Socioeconómica:</strong> {data.ficha.situacion_socioeconomica}</p>
-             
+        {/* GRUPO FAMILIAR */}
+        <section className="section-print animate-in">
+          <h3 className="section-title-print">V. Situación Familiar</h3>
+          <div style={{ padding: '1rem' }}>
              {data.hermanos.length > 0 && (
-               <div style={{ marginBottom: '1.5rem' }}>
-                 <p style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.5rem' }}>Hermanos:</p>
-                 <table style={{ width: '100%', fontSize: '0.875rem' }}>
-                    <thead><tr><th>Nombre</th><th>DNI</th><th>F. Nacimiento</th><th>Escuela</th></tr></thead>
+               <div style={{ marginBottom: '1rem' }}>
+                 <p style={{ fontWeight: 700, fontSize: '8pt', marginBottom: '0.5rem', textTransform: 'uppercase', color: '#64748b' }}>Hermanos:</p>
+                 <table style={{ width: '100%' }}>
+                    <thead><tr><th>Nombre</th><th>DNI</th><th>Escuela</th></tr></thead>
                     <tbody>
                       {data.hermanos.map((h: any, i: number) => (
-                        <tr key={i}><td>{h.nombre_apellido}</td><td>{h.dni_nro}</td><td>{h.fecha_nac}</td><td>{h.estudios_escuela}</td></tr>
+                        <tr key={i}><td>{h.nombre_apellido}</td><td>{h.dni_nro}</td><td>{h.estudios_escuela}</td></tr>
                       ))}
                     </tbody>
                  </table>
                </div>
              )}
              
-             <p><strong>Otros datos de interés:</strong></p>
-             <div style={{ padding: '0.750rem', border: '1px solid #1C3F60', marginTop: '0.5rem', minHeight: '80px', fontSize: '0.875rem' }}>
+             <p><strong>Observaciones / Situación Socioeconómica:</strong></p>
+             <div style={{ padding: '0.75rem', border: '1px solid #e2e8f0', marginTop: '0.5rem', minHeight: '60px', background: '#f8fafc', borderRadius: '4px' }}>
                {data.ficha.otros_datos || 'No se declaran otros datos.'}
              </div>
           </div>
         </section>
 
-        {/* GESTIÓN DE ENTREVISTA - NO SE IMPRIME */}
-        <section className="no-print card animate-in" style={{ background: 'var(--accent-soft)', border: '1.5px dashed var(--accent)', padding: '2rem', marginTop: '3rem' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar color="var(--accent)" />
-            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Gestión Administrativa de Entrevista</h2>
+        <footer style={{ marginTop: '2rem', textAlign: 'center', fontSize: '8pt', color: '#94a3b8' }}>
+          Este documento es una solicitud formal de admisión y no garantiza el ingreso definitivo a la institución.
+        </footer>
+      </div>
+
+      {/* GESTIÓN DE CITA - NO SE IMPRIME */}
+      <section className="no-print animate-in" style={{ marginTop: '4rem', paddingBottom: '5rem' }}>
+        <div className="card" style={{ background: '#f8fafc', border: '2px dashed var(--accent)', padding: '2.5rem' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <Calendar color="var(--accent)" size={28} />
+            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Agenda de Entrevista</h2>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
             <div>
               <div className="form-group">
-                <label className="form-label">Programar Nueva Cita</label>
+                <label className="form-label">Fecha y Hora de la Cita</label>
                 <input 
                   type="datetime-local" 
                   className="form-input" 
@@ -609,41 +659,40 @@ const DetalleFicha = ({ token }: { token: string }) => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Notas rápidas para la agenda</label>
+                <label className="form-label">Observaciones para la entrevista</label>
                 <textarea 
                   className="form-textarea" 
-                  placeholder="Recordatorio: La familia traerá papeles..." 
+                  placeholder="Ej: La familia debe traer original de CUD..." 
                   value={agendaNotes} 
-                  rows={2}
+                  rows={3}
                   onChange={e => setAgendaNotes(e.target.value)}
                 ></textarea>
               </div>
-              <button 
-                className="btn btn-primary" 
-                style={{ width: '100%' }} 
-                onClick={handleAgendar}
-                disabled={savingStatus}
-              >
-                {savingStatus ? 'Guardando...' : 'Programar y Guardar Cita'}
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAgendar} disabled={savingStatus}>
+                {savingStatus ? 'Guardando...' : 'Programar y Notificar'}
               </button>
             </div>
             
-            <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '2rem' }}>
-              <h4 style={{ fontSize: '0.875rem', marginBottom: '1rem', textTransform: 'uppercase' }}>Historial de Eventos</h4>
-              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            <div>
+              <h4 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Historial</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {data.entrevistas.length > 0 ? data.entrevistas.map((ev: any, i: number) => (
-                  <div key={i} style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem', fontSize: '0.8125rem', border: '1px solid var(--border-color)' }}>
-                    <div style={{ fontWeight: 700 }}>{new Date(ev.fecha_hora).toLocaleString()}</div>
-                    <div style={{ color: 'var(--text-muted)' }}>{ev.notas}</div>
+                  <div key={i} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>{new Date(ev.fecha_hora).toLocaleString()}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-main)' }}>{ev.notas}</div>
                   </div>
-                )) : <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Aún no hay entrevistas programadas.</p>}
+                )) : <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)' }}>Aún no hay citas registradas.</div>}
               </div>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
+
+const ArrowLeft = ({ size }: { size: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+);
 
 export default AdminPanel;
