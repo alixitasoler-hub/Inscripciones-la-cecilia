@@ -10,7 +10,10 @@ import {
   Clock,
   Printer,
   MessageCircle,
-  Edit2
+  Edit2,
+  Edit3,
+  Save,
+  X
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
@@ -319,22 +322,21 @@ const Agenda = ({ token }: { token: string }) => {
                   <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{new Date(e.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}hs</div>
                   <div style={{ color: 'var(--primary)', fontWeight: 500 }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
                   <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>DNI: {e.alumno_dni}</div>
+                  {e.respuesta && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.8125rem', padding: '0.25rem 0.5rem', background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 'var(--radius-sm)', fontWeight: 600, display: 'inline-block' }}>
+                      Respuesta: {e.respuesta}
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                  <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline" style={{ fontSize: '0.8125rem' }}>
                   <Edit2 size={16} /> Ver Ficha / Notas
                 </Link>
-                {/* Botón WhatsApp rápido */}
-                <a 
-                  href={`https://wa.me/?text=Hola, nos comunicamos de la Escuela La Cecilia por su solicitud de ingreso...`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="btn btn-ghost" 
-                  style={{ color: '#25D366' }}
-                >
+                {/* Botón WhatsApp rápido - Usa el template si hay datos de contacto en la query (o simplemente linkea a la ficha) */}
+                <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-ghost" style={{ color: '#25D366' }}>
                   <MessageCircle size={20} />
-                </a>
+                </Link>
               </div>
             </div>
           )) : (
@@ -353,6 +355,9 @@ const DetalleFicha = ({ token }: { token: string }) => {
   const [agendaDate, setAgendaDate] = useState('');
   const [agendaNotes, setAgendaNotes] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempFicha, setTempFicha] = useState<any>(null);
+  const [entrevistas, setEntrevistas] = useState<any[]>([]);
   
   const location = useLocation();
   const id = location.pathname.split('/').pop();
@@ -360,7 +365,11 @@ const DetalleFicha = ({ token }: { token: string }) => {
 
   const load = () => {
     fetch(`${API_URL}/admin/fichas/${id}`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json()).then(setData);
+      .then(res => res.json()).then(res => {
+        setData(res);
+        setTempFicha(res.ficha);
+        setEntrevistas(res.entrevistas || []);
+      });
   }
 
   useEffect(() => { load(); }, [id, token]);
@@ -383,22 +392,85 @@ const DetalleFicha = ({ token }: { token: string }) => {
 
   const handleAgendar = async () => {
     if (!agendaDate) return alert('Seleccione fecha y hora');
+    
+    // Validar superposición de 1 hora en el frontend
+    const newTime = new Date(agendaDate).getTime();
+    const overlap = entrevistas.some((e: any) => {
+      if (e.estado === 'cancelada') return false;
+      const et = new Date(e.fecha_hora).getTime();
+      return Math.abs(newTime - et) < 3600000; // 60 minutos
+    });
+
+    if (overlap) {
+      return alert('Error: No se pueden programar entrevistas con menos de 1 hora de diferencia entre ellas.');
+    }
+
     setSavingStatus(true);
     try {
-      await fetch(`${API_URL}/admin/entrevistas`, {
+      const res = await fetch(`${API_URL}/admin/entrevistas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ficha_id: id, fecha_hora: agendaDate, notas: agendaNotes })
       });
+      if (!res.ok) {
+        const err = await res.json() as any;
+        throw new Error(err.error || 'Error al programar');
+      }
+      
+      // Abrir WhatsApp con el nuevo template después de agendar
+      if (isWhatsApp) {
+        const template = getWATemplate({ fecha_hora: agendaDate });
+        window.open(`https://wa.me/${contactData.replace(/\D/g,'')}?text=${template}`, '_blank');
+      }
+
       setAgendaDate('');
       setAgendaNotes('');
       load();
-    } catch (e) {
-      alert('Error al programar');
+    } catch (e: any) {
+      alert(e.message);
     } finally {
       setSavingStatus(false);
     }
   }
+
+  const handleUpdateEntrevista = async (entrevistaId: number, updates: any) => {
+    setSavingStatus(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/entrevistas/${entrevistaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updates)
+      });
+      if (!res.ok) throw new Error('Error al actualizar entrevista');
+      load();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
+  const handleCancelarEntrevista = async (entrevistaId: number) => {
+    if (!confirm('¿Está seguro de que desea cancelar esta entrevista?')) return;
+    await handleUpdateEntrevista(entrevistaId, { estado: 'cancelada' });
+  };
+
+  const handleSaveEdit = async () => {
+    setSavingStatus(true);
+    try {
+      await fetch(`${API_URL}/admin/fichas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(tempFicha)
+      });
+      setIsEditing(false);
+      load();
+    } catch (e) {
+      alert('Error al guardar cambios');
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   const handlePrint = () => { window.print(); };
 
@@ -408,7 +480,17 @@ const DetalleFicha = ({ token }: { token: string }) => {
   const isWhatsApp = data.ficha.contacto_entrevista_medio === 'WhatsApp';
   const isEmail = data.ficha.contacto_entrevista_medio === 'Email';
 
-  const waLink = isWhatsApp ? `https://wa.me/${contactData.replace(/\D/g,'')}?text=Hola ${data.ficha.contacto_entrevista_nombre}, nos comunicamos de la Escuela La Cecilia por su solicitud de ingreso de ${data.ficha.nombre} ${data.ficha.apellido}.` : null;
+  const getWATemplate = (entrevista?: any) => {
+    const alumno = `${data.ficha.nombre} ${data.ficha.apellido}`;
+    if (entrevista) {
+      const fecha = new Date(entrevista.fecha_hora).toLocaleDateString('es-AR');
+      const hora = new Date(entrevista.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+      return `¡Hola!%0AHemos recibido la solicitud de inscripción de ${alumno}. Les proponemos realizar la entrevista el día ${fecha} a las ${hora}.%0ALes pedimos, por favor, que confirmen la disponibilidad para ese horario. En caso de no poder asistir, agradeceremos que nos avisen con anticipación por este mismo medio.%0AMuchas gracias.`;
+    }
+    return `Hola ${data.ficha.contacto_entrevista_nombre}, nos comunicamos de la Escuela La Cecilia por su solicitud de ingreso de ${alumno}.`;
+  };
+
+  const waLink = isWhatsApp ? `https://wa.me/${contactData.replace(/\D/g,'')}?text=${getWATemplate()}` : null;
   const mailLink = isEmail ? `mailto:${contactData}?subject=Solicitud de Ingreso - Escuela La Cecilia&body=Hola ${data.ficha.contacto_entrevista_nombre}, ...` : null;
 
   return (
@@ -472,6 +554,43 @@ const DetalleFicha = ({ token }: { token: string }) => {
             text-transform: uppercase;
             font-size: 8pt;
           }
+
+          .signature-box {
+            margin-top: 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2cm;
+            page-break-inside: avoid;
+          }
+
+          .signature-line {
+            border-top: 1px solid black;
+            margin-top: 1.5cm;
+            padding-top: 0.2cm;
+            text-align: center;
+            font-size: 8pt;
+          }
+
+          .agreement-text-print {
+            font-size: 8.5pt;
+            line-height: 1.4;
+            text-align: justify;
+            margin-top: 1rem;
+          }
+
+          .agreement-text-print h4 {
+            font-size: 10pt;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            color: #1C3F60;
+          }
+
+          .agreement-text-print h5 {
+            font-size: 9pt;
+            margin-top: 0.75rem;
+            margin-bottom: 0.25rem;
+            font-weight: 800;
+          }
         }
       `}</style>
 
@@ -483,6 +602,14 @@ const DetalleFicha = ({ token }: { token: string }) => {
           <button className="btn btn-primary" onClick={handlePrint}>
             <Printer size={18} /> Generar PDF / Imprimir
           </button>
+          <button className={`btn ${isEditing ? 'btn-accent' : 'btn-outline'}`} onClick={() => setIsEditing(!isEditing)}>
+            <Edit3 size={18} /> {isEditing ? 'Cancelar Edición' : 'Editar Ficha'}
+          </button>
+          {isEditing && (
+            <button className="btn btn-primary" onClick={handleSaveEdit} style={{ background: '#059669' }}>
+              <Save size={18} /> Guardar Cambios
+            </button>
+          )}
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -494,7 +621,7 @@ const DetalleFicha = ({ token }: { token: string }) => {
       <div id="print-area">
         <header className="print-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <img src="/logo.png" alt="Logo La Cecilia" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+            <img src="/logo.jpg" alt="Logo La Cecilia" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
             <div>
               <h1 style={{ lineHeight: 1 }}>Ficha de Inscripción</h1>
               <p style={{ fontWeight: 700, color: '#64748b', fontSize: '9pt', marginTop: '0.25rem' }}>LA CECILIA - Escuela de la Nueva Cultura</p>
@@ -542,22 +669,65 @@ const DetalleFicha = ({ token }: { token: string }) => {
         </div>
 
         {/* ALUMNO */}
-        <section className="section-print animate-in">
+        <section className={`section-print animate-in ${data.ficha.modificado_admin ? 'admin-modified' : ''}`}>
+          <style>{`
+             .admin-modified span, .admin-modified p strong + span, .admin-modified td, .admin-modified .data-value { 
+               font-style: italic !important; 
+             }
+          `}</style>
           <h3 className="section-title-print">I. Datos del Alumno</h3>
           <div className="grid-print">
-            <p className="full-print"><strong>Nombre Completo:</strong> <span style={{fontSize: '11pt', fontWeight: 700}}>{data.ficha.apellido}, {data.ficha.nombre}</span></p>
-            <p><strong>Documento:</strong> {data.ficha.dni_tipo} {data.ficha.dni_nro}</p>
-            <p><strong>Sexo:</strong> {data.ficha.sexo || '-'}</p>
-            <p><strong>Fecha de Nacimiento:</strong> {data.ficha.fecha_nac || '-'}</p>
-            <p><strong>Lugar de Nacimiento:</strong> {data.ficha.lugar_nac || '-'}</p>
-            <p className="full-print"><strong>Domicilio:</strong> {data.ficha.direccion}, {data.ficha.localidad} ({data.ficha.cp || '-'}) - {data.ficha.provincia}</p>
-            <p><strong>Nivel a Ingresar:</strong> {data.ficha.nivel_ingreso}</p>
-            <p><strong>Grado/Año:</strong> {data.ficha.grado_anio} {data.ficha.repitente ? '(Repitente)' : ''}</p>
-            
-            <div className="full-print" style={{marginTop: '0.5rem', padding: '0.75rem', background: '#f8fafc', border: '1px dashed #1c3f60' }}>
-                <p style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '7.5pt', color: '#1c3f60', marginBottom: '0.25rem' }}>Contacto para Entrevista</p>
-                <p><strong>{data.ficha.contacto_entrevista_nombre}</strong> | {data.ficha.contacto_entrevista_medio}: <span style={{fontWeight: 700}}>{data.ficha.contacto_entrevista_dato}</span></p>
+            <div className="full-print">
+              <strong>Nombre Completo:</strong> 
+              {isEditing ? (
+                <div className="flex gap-2" style={{marginTop: '0.5rem'}}>
+                  <input className="form-input" placeholder="Apellido" value={tempFicha.apellido} onChange={e => setTempFicha({...tempFicha, apellido: e.target.value})} />
+                  <input className="form-input" placeholder="Nombre" value={tempFicha.nombre} onChange={e => setTempFicha({...tempFicha, nombre: e.target.value})} />
+                </div>
+              ) : (
+                <span className="data-value" style={{fontSize: '11pt', fontWeight: 700}}>{data.ficha.apellido}, {data.ficha.nombre}</span>
+              )}
             </div>
+            
+            <div>
+              <strong>Documento:</strong> 
+              {isEditing ? (
+                <input className="form-input" value={tempFicha.dni_nro} onChange={e => setTempFicha({...tempFicha, dni_nro: e.target.value})} />
+              ) : (
+                <span className="data-value">{data.ficha.dni_tipo} {data.ficha.dni_nro}</span>
+              )}
+            </div>
+            
+            <div>
+              <strong>Fecha de Nacimiento:</strong> 
+              {isEditing ? (
+                <input type="date" className="form-input" value={tempFicha.fecha_nac} onChange={e => setTempFicha({...tempFicha, fecha_nac: e.target.value})} />
+              ) : (
+                <span className="data-value">{data.ficha.fecha_nac || '-'}</span>
+              )}
+            </div>
+
+            <div className="full-print">
+              <strong>Domicilio:</strong> 
+              {isEditing ? (
+                <input className="form-input" value={tempFicha.direccion} onChange={e => setTempFicha({...tempFicha, direccion: e.target.value})} />
+              ) : (
+                <span className="data-value">{data.ficha.direccion}, {data.ficha.localidad} ({data.ficha.cp || '-'}) - {data.ficha.provincia}</span>
+              )}
+            </div>
+            
+            <div>
+              <strong>Nivel a Ingresar:</strong> {data.ficha.nivel_ingreso}
+            </div>
+            <div>
+              <strong>Grado/Año:</strong> {data.ficha.grado_anio} {data.ficha.repitente ? '(Repitente)' : ''}
+            </div>
+
+            {data.ficha.modificado_admin === 1 && (
+              <div className="full-print no-print" style={{ color: 'var(--accent)', fontSize: '0.75rem', fontWeight: 700, fontStyle: 'italic', marginTop: '0.5rem' }}>
+                * Esta ficha contiene datos modificados por la administración.
+              </div>
+            )}
           </div>
         </section>
 
@@ -598,13 +768,30 @@ const DetalleFicha = ({ token }: { token: string }) => {
         </section>
 
         {/* SALUD */}
-        <section className="section-print animate-in">
+        <section className={`section-print animate-in ${data.ficha.modificado_admin ? 'admin-modified' : ''}`}>
           <h3 className="section-title-print">IV. Salud y Actividades</h3>
           <div className="grid-print">
-            <p className="full-print"><strong>Salud:</strong> {data.ficha.salud_detalles || '-'}</p>
-            <p><strong>Obra Social:</strong> {data.ficha.obra_social || 'No posee'}</p>
-            <p><strong>Discapacidad:</strong> {data.ficha.tiene_cud ? 'SI (Posee CUD)' : 'NO'}</p>
-            <p className="full-print"><strong>Otras Actividades:</strong> {data.ficha.otras_actividades || '-'}</p>
+            <div className="full-print">
+              <strong>Salud:</strong> 
+              {isEditing ? (
+                <textarea className="form-textarea" value={tempFicha.salud_detalles} onChange={e => setTempFicha({...tempFicha, salud_detalles: e.target.value})} />
+              ) : (
+                <span className="data-value">{data.ficha.salud_detalles || '-'}</span>
+              )}
+            </div>
+            <div>
+              <strong>Obra Social:</strong> 
+              {isEditing ? (
+                <input className="form-input" value={tempFicha.obra_social} onChange={e => setTempFicha({...tempFicha, obra_social: e.target.value})} />
+              ) : (
+                <span className="data-value">{data.ficha.obra_social || 'No posee'}</span>
+              )}
+            </div>
+            <div>
+              <strong>Discapacidad:</strong> 
+              <span className="data-value">{data.ficha.tiene_cud ? 'SI (Posee CUD)' : 'NO'}</span>
+            </div>
+            <p className="full-print"><strong>Otras Actividades:</strong> <span className="data-value">{data.ficha.otras_actividades || '-'}</span></p>
           </div>
         </section>
 
@@ -614,21 +801,114 @@ const DetalleFicha = ({ token }: { token: string }) => {
           <div style={{ padding: '1rem' }}>
              {data.hermanos.length > 0 && (
                <div style={{ marginBottom: '1rem' }}>
-                 <p style={{ fontWeight: 700, fontSize: '8pt', marginBottom: '0.5rem', textTransform: 'uppercase', color: '#64748b' }}>Hermanos:</p>
+                 <p style={{ fontWeight: 700, fontSize: '8pt', marginBottom: '0.5rem', textTransform: 'uppercase', color: '#64748b' }}>Composición Familiar / Convivientes:</p>
                  <table style={{ width: '100%' }}>
-                    <thead><tr><th>Nombre</th><th>DNI</th><th>Escuela</th></tr></thead>
+                    <thead><tr><th>Vínculo</th><th>Nombre</th><th>Fecha Nac.</th><th>Escuela (Hermanos)</th></tr></thead>
                     <tbody>
                       {data.hermanos.map((h: any, i: number) => (
-                        <tr key={i}><td>{h.nombre_apellido}</td><td>{h.dni_nro}</td><td>{h.estudios_escuela}</td></tr>
+                        <tr key={i}>
+                          <td>{h.vinculo === 'Otro' ? h.vinculo_otro : h.vinculo}</td>
+                          <td>{h.nombre_apellido}</td>
+                          <td>{h.fecha_nac || '-'}</td>
+                          <td>{h.estudios_escuela || '-'}</td>
+                        </tr>
                       ))}
                     </tbody>
                  </table>
                </div>
              )}
              
-             <p><strong>Observaciones / Situación Socioeconómica:</strong></p>
-             <div style={{ padding: '0.75rem', border: '1px solid #e2e8f0', marginTop: '0.5rem', minHeight: '60px', background: '#f8fafc', borderRadius: '4px' }}>
-               {data.ficha.otros_datos || 'No se declaran otros datos.'}
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginTop: '1rem' }}>
+               <div>
+                 <p style={{ fontWeight: 700, fontSize: '8pt', textTransform: 'uppercase', color: '#64748b', marginBottom: '0.25rem' }}>Situación Socioeconómica:</p>
+                 {isEditing ? (
+                    <select className="form-select" value={tempFicha.situacion_socioeconomica} onChange={e => setTempFicha({...tempFicha, situacion_socioeconomica: e.target.value})}>
+                      <option value="">Seleccionar...</option>
+                      <option value="Muy buena">Muy buena</option>
+                      <option value="Buena">Buena</option>
+                      <option value="Regular">Regular</option>
+                      <option value="Mala">Mala</option>
+                    </select>
+                  ) : (
+                    <div className="data-value" style={{ padding: '0.5rem', border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: '4px', fontWeight: 700, color: 'var(--primary)' }}>
+                      {data.ficha.situacion_socioeconomica || 'No especificada'}
+                    </div>
+                  )}
+               </div>
+               <div>
+                 <p style={{ fontWeight: 700, fontSize: '8pt', textTransform: 'uppercase', color: '#64748b', marginBottom: '0.25rem' }}>Observaciones / Otros Datos:</p>
+                 {isEditing ? (
+                    <textarea className="form-textarea" value={tempFicha.otros_datos} onChange={e => setTempFicha({...tempFicha, otros_datos: e.target.value})} rows={2} />
+                  ) : (
+                    <div className="data-value" style={{ padding: '0.5rem', border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: '4px', minHeight: '40px' }}>
+                      {data.ficha.otros_datos || 'No se declaran otros datos.'}
+                    </div>
+                  )}
+               </div>
+             </div>
+          </div>
+        </section>
+
+        {/* ACUERDO - SOLO PRINT */}
+        <section className="section-print agreement-text-print" style={{ border: 'none', display: 'none' }} id="agreement-section">
+          <style>{`
+            @media print {
+              #agreement-section { display: block !important; page-break-before: always; }
+            }
+          `}</style>
+          <h4>ACUERDO DE ADMISIÓN Y PERMANENCIA</h4>
+          
+          <p>Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción, contando siempre con la posibilidad de efectuar las consultas que consideren necesarias.</p>
+          <p>No se considera que exista un alumno o alumna fuera y otro u otra dentro de la Escuela, por lo cual se espera una conducta coherente del alumnado con los principios de la misma, en cualquier ámbito en que se encuentren.</p>
+          <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
+
+          <h5>ADMISIÓN</h5>
+          <p>La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones. Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
+
+          <h5>BUEN TRATO</h5>
+          <p>No se permitirá ningún tipo de trato violento, físico ni verbal, como burlas, discriminación, bullying, etc. tanto dentro como fuera de la Escuela. Estas conductas serán informadas y conversadas con las familias y se exigirán seguimientos en cada caso.</p>
+
+          <h5>EXPECTATIVAS ACADÉMICAS</h5>
+          <p>Las familias, alumnos y alumnas deben comprender y aceptar que no resulta lógico ni posible que todos lleguen a los mismos resultados en sus aprendizajes académicos, ya que ello dependerá de sus intereses y capacidades. El propósito educativo de la Escuela es colaborar para que cada alumno o alumna pueda conocerse a sí mismo, conocer sus intereses y capacidades y desarrollarlos de la mejor manera, para poder hacer de ellos un medio de vida dentro de un proyecto vital con sentido social. Para los propósitos enunciados se les brindarán las opciones académicas correspondientes y el apoyo necesario. Los alumnos y alumnas podrán elegir las actividades que realizan y proponer otras que no se estén realizando. En todos los casos la tutoría de la Escuela, junto a educadores, hará un seguimiento de cada alumno o alumna, para lo cual se llevará un registro detallado de las actividades.</p>
+
+          <h5>MODO DE VIDA - ALIMENTACIÓN</h5>
+          <p>La Escuela propone un modo de vida que contribuya a la salud física y psicológica. Se propone una dieta vegetariana y natural que excluye las carnes de todo tipo y sus derivados, bebidas alcohólicas, gaseosas y golosinas, así como otros alimentos con exceso de dulces o de sal. Tanto en el predio de la Escuela como durante salidas, reuniones, actividades escolares o cualquier otra actividad donde participen grupalmente los alumnos y alumnas se respetará la alimentación vegetariana y los hábitos propuestos. El cumplimiento de esta dieta no es de exigencia en el hogar, pero se solicita a las familias que colaboren para que sus hijos o hijas adopten conscientemente una forma de vida que contribuya a cuidar su salud. En el mismo sentido, no se deben ingresar a la escuela alimentos que no respondan a las pautas de cuidado de la salud que se recomiendan.</p>
+
+          <h5>CIGARRILLO, ALCOHOL, DROGAS</h5>
+          <p>Se consideran dañinos para la salud el tabaco, alcohol u otras drogas, por lo cual alumnos y alumnas deben comprometerse a no consumirlos en ningún momento, dentro o fuera de la escuela. Se solicita a las familias que colaboren para que sus hijos o hijas no se conviertan en consumidores de estos elementos perjudiciales para la salud y generadores de tantos trastornos sociales.</p>
+
+          <h5>ACCESORIOS</h5>
+          <p>Hay jóvenes que suelen utilizar accesorios (algunos tipos de piercings, muñequeras, cadenas, expansores, etc.) que implican un riesgo para la seguridad y salud propia y de sus compañeros o compañeras, pero además son representativos de condicionamientos sobre los que la Escuela está fuertemente interesada en trabajar. Por lo tanto, los alumnos y alumnas convendrán no usar accesorios que no sean consensuados con la escuela y la familia, dentro ni fuera de ella. No obstante, se podrán revisar estas restricciones en todo momento a través de los mecanismos orgánicos colectivos disponibles, tales como las Asambleas.</p>
+
+          <h5>BOLICHES, VIDA NOCTURNA</h5>
+          <p>Los alumnos y alumnas de la Escuela se comprometerán a no asistir a pubs, boliches o lugares similares, ya que no son ambientes convenientes para adolescentes, ni son acordes a la forma de vida propuesta.</p>
+
+          <h5>HORARIO Y ASISTENCIA</h5>
+          <p>La Escuela considera imprescindible que alumnos y alumnas participen con regularidad y puntualidad a las actividades de la vida escolar. Se evitarán las inasistencias reiteradas y las reincorporaciones que deban gestionarse -con motivo de alcanzar la cantidad de faltas permitidas por el reglamento- se autorizarán solamente en caso de que estén debidamente justificadas por enfermedad u otras circunstancias graves que las ameriten.</p>
+
+          <h5>SANCIONES</h5>
+          <p>No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos. Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
+
+          <h5>CUMPLIMIENTO COMPROMISO ECONÓMICO</h5>
+          <p>Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
+
+          <h5>CUOTAS</h5>
+          <p>Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
+
+          <div className="signature-box">
+             <div>
+                <div className="signature-line">Firma Adulto Responsable</div>
+                <div style={{fontSize: '7pt', marginTop: '0.2cm'}}>Aclaración: ___________________________</div>
+                <div style={{fontSize: '7pt', marginTop: '0.2cm'}}>Vínculo: ______________________________</div>
+             </div>
+             <div>
+                <div className="signature-line">Firma Adulto Responsable</div>
+                <div style={{fontSize: '7pt', marginTop: '0.2cm'}}>Aclaración: ___________________________</div>
+                <div style={{fontSize: '7pt', marginTop: '0.2cm'}}>Vínculo: ______________________________</div>
+             </div>
+             <div style={{ gridColumn: '1 / -1', maxWidth: '50%', margin: '0 auto' }}>
+                <div className="signature-line">Firma del Alumno/a</div>
+                <div style={{fontSize: '7pt', marginTop: '0.2cm', textAlign: 'center'}}>Aclaración: ___________________________</div>
              </div>
           </div>
         </section>
@@ -677,9 +957,57 @@ const DetalleFicha = ({ token }: { token: string }) => {
               <h4 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Historial</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {data.entrevistas.length > 0 ? data.entrevistas.map((ev: any, i: number) => (
-                  <div key={i} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>{new Date(ev.fecha_hora).toLocaleString()}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-main)' }}>{ev.notas}</div>
+                  <div key={i} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)', opacity: ev.estado === 'cancelada' ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: ev.estado === 'cancelada' ? 'var(--text-muted)' : 'var(--primary)', marginBottom: '0.25rem' }}>
+                        {new Date(ev.fecha_hora).toLocaleString()} 
+                        {ev.estado === 'cancelada' && <span style={{ color: 'var(--error)', marginLeft: '0.5rem' }}>(CANCELADA)</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                         {ev.estado !== 'cancelada' && (
+                           <button className="btn btn-ghost" style={{ padding: '4px', color: 'var(--error)' }} title="Cancelar" onClick={() => handleCancelarEntrevista(ev.id)}>
+                             <X size={16} />
+                           </button>
+                         )}
+                         <a 
+                           href={`https://wa.me/${contactData.replace(/\D/g,'')}?text=${getWATemplate(ev)}`} 
+                           target="_blank" 
+                           rel="noreferrer" 
+                           className="btn btn-ghost" 
+                           style={{ padding: '4px', color: '#25D366' }}
+                           title="Re-enviar WhatsApp"
+                         >
+                           <MessageCircle size={16} />
+                         </a>
+                      </div>
+                    </div>
+                    
+                    {ev.estado !== 'cancelada' && (
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notas Admin</label>
+                          <textarea 
+                            className="form-textarea" 
+                            style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                            defaultValue={ev.notas}
+                            onBlur={(e) => handleUpdateEntrevista(ev.id, { notas: e.target.value })}
+                            placeholder="Notas de la entrevista..."
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Respuesta de la Familia</label>
+                          <input 
+                            type="text"
+                            className="form-input"
+                            style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                            defaultValue={ev.respuesta}
+                            onBlur={(e) => handleUpdateEntrevista(ev.id, { respuesta: e.target.value })}
+                            placeholder="Ej: Confirmaron asistencia, piden cambiar..."
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {ev.estado === 'cancelada' && ev.notas && <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nota: {ev.notas}</div>}
                   </div>
                 )) : <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)' }}>Aún no hay citas registradas.</div>}
               </div>

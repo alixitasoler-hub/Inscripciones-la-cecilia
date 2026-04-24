@@ -15,3 +15,33 @@ Falta un botón de salir en el formulario de carga
 sólo uno debe ser el de los datos obligatorios. hay niños que no tienen como adultos responsables a madre o padre y en el estado actual obliga a cargar los datos de ambos. 
 -agregar en alguna parte a qué persona (y de ella a qué whatsapp, teléfono o mail habría que enviar la notificación de la entrevista) y deberian ser un datos obligatorios
 -cuando haya faltante o error en los datos obligatorios, que el mensaje de aviso sea una ventana emergente
+
+En la ficha de inscripción:
+- que el grado o año sea elegible a traves de una lista desplegable, que deberá filtrarse de acuerdo al nivel elegido. Si es Nivel Inicial: Sala de 3 años, Sala de 4 años y Sala de 5 años
+Si es Nivel Primario: 1° grado, 2° grado,...,7° grado
+Si es Nivel Secundario: 1° año, 2° año,..., 5° año
+- que en la parte de escolaridad previa se pueda cargar más de una escuela por nivel (un alumno puede ir un año a una escuela y al siguiente en otra y así. Y eso debe poder asentarse en la ficha). Puede ser un renglón por sala, grado o año.
+- la ficha de inscripción podría tener un formato más atractivo/profesional.
+-te subo el logo para que lo incorpores tanto en el pdf como en las distintas pantallas
+
+Respecto de la escolaridad previa, deberían estar listados por defecto cada uno de los grados/años/salas listos para ser completados. Porque sino la familia puede pasarlos de largo, no queda muy claro que deben cargar todo así y es información que se necesita.
+No modifiques el logo, subí ese que te pasé tal cual.
+
+Vuelvo a decirte qué necesito para el formulario de carga: un listado con un renglón por cada año de escolaridad previa, ya listado y listo para completar, sino las familias omiten esa información.
+Y sigue estando el logo modificado. Quiero que sea el original que te pasé. Vuelvo a subirlo, por las dudas.
+
+Podría ser que el listado de la escolaridad previa llegara hasta el curso de ingreso. Por ejemplo, si entra en 7° grado, que se liste desde las salas de nivel inicial, hasta 7° o si entra en 2° año, listar desde nivel inicial hasta 2° año (porque puede haber un cambio de escuela durante el año cursado)
+El año para el que se solicita el ingreso debería ser opcional, con una lista desplegable al principio del formulario (porque alguien puede inscribir para el año en curso o para año subsiguiente)
+
+En la ficha de inscripción:
+-Preguntar si posee discapacidad/es y en caso afirmativo, que se especifique cuál/es. Y que permanezca la pregunta de si tiene CUD, eso no cambiarlo
+-el acuerdo de admisión y permanencia está incompleto. Colocar el texto integro. También debe estar al final de la ficha en pdf, con un lugar al pie para que firmen adultos responsables y alumno/a (firma, aclaración, vínculo)
+
+-en responsables/tutores, no poner por defecto madre/padre, sino como primer campo el vínculo
+-en composición familiar, que las columnas sean:
+vinculo (hermano/a, abuelo/a, tio/a, pareja de madre o padre, otro -> cuál), nombre y apellido, fecha de nacimiento e institucion a la que concurre (en el caso de los hermanos solamente)
+- la situación económica debe elegirse de una lista desplegable: Muy buena, Buena, Regular, Mala. Pero conservar el campo de observaciones.
+
+En la parte administrativa:
+- que no se puedan superponer las entrevistas. Debe haber una franja de 1 hora ocupada entre reuniones.
+- la ficha de inscripción debe poder ser editada por admin (en caso de que haya que modificar algun dato erroeo o faltante). Tal vez las modificaciones podrían diferenciarse con fuentes distintas o itálica o algo así.

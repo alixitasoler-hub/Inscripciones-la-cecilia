@@ -77,8 +77,8 @@ export default {
         } }
         if (hermanos?.length) {
           for (const h of hermanos) {
-            batch.push(env.DB.prepare('INSERT INTO hermanos (ficha_id, nombre_apellido, dni_nro, fecha_nac, estado_civil, estudios_escuela, domicilio_ocupacion, ocupacion) VALUES (?,?,?,?,?,?,?,?)')
-              .bind(fichaId, h.nombre_apellido, h.dni_nro, h.fecha_nac, h.estado_civil, h.estudios_escuela, h.domicilio_ocupacion, h.ocupacion));
+            batch.push(env.DB.prepare('INSERT INTO hermanos (ficha_id, vinculo, nombre_apellido, dni_nro, fecha_nac, estado_civil, estudios_escuela, domicilio_ocupacion, ocupacion) VALUES (?,?,?,?,?,?,?,?,?)')
+              .bind(fichaId, h.vinculo, h.nombre_apellido, h.dni_nro, h.fecha_nac, h.estado_civil, h.estudios_escuela, h.domicilio_ocupacion, h.ocupacion));
           }
         }
         if (convivientes?.length) {
@@ -94,15 +94,23 @@ export default {
         if (env.RESEND_API_KEY) {
           try {
             const resend = new Resend(env.RESEND_API_KEY);
-            await resend.emails.send({
+            const { data: emailRes, error: emailErr } = await resend.emails.send({
               from: 'Inscripciones La Cecilia <onboarding@resend.dev>', // Usar dominio propio si se configura
               to: 'laceciliasecretaria@gmail.com',
               subject: `Nueva Solicitud de Ingreso: ${ficha.apellido}, ${ficha.nombre}`,
               text: `Se ha recibido una nueva solicitud de inscripción.\n\nAlumno: ${ficha.apellido}, ${ficha.nombre}\nNivel: ${ficha.nivel_ingreso} - ${ficha.grado_anio}\n\nPuede ver los detalles completos ingresando al panel administrativo: ${env.FRONTEND_URL}/admin`
             });
-          } catch (mailErr) {
-            console.error('Error al enviar mail:', mailErr);
+            
+            if (emailErr) {
+              console.error('Error de Resend:', emailErr);
+            } else {
+              console.log('Email enviado con éxito:', emailRes?.id);
+            }
+          } catch (err: any) {
+            console.error('Error al enviar mail (excepción):', err.message);
           }
+        } else {
+          console.warn('RESEND_API_KEY no configurada. No se enviará notificación.');
         }
 
         return jsonResponse({ success: true, id: fichaId }, 201);
@@ -137,12 +145,26 @@ export default {
         }
         if (path === '/api/admin/entrevistas' && request.method === 'POST') {
           const { ficha_id, fecha_hora, notas } = await request.json() as any;
+          
+          // Validar superposición de 1 hora
+          const newTime = new Date(fecha_hora).getTime();
+          const { results: existing } = await env.DB.prepare('SELECT fecha_hora FROM entrevistas WHERE estado != "cancelada"').all();
+          const overlap = existing.some((e: any) => {
+            const et = new Date(e.fecha_hora).getTime();
+            return Math.abs(newTime - et) < 3600000; // 60 minutos
+          });
+
+          if (overlap) {
+            return jsonResponse({ error: 'Existe otra entrevista programada en un horario cercano (franja de 1 hora).' }, 400);
+          }
+
           await env.DB.batch([
             env.DB.prepare('INSERT INTO entrevistas (ficha_id, fecha_hora, notas) VALUES (?,?,?)').bind(ficha_id, fecha_hora, notas),
             env.DB.prepare("UPDATE fichas SET estado = 'entrevista_programada' WHERE id = ?").bind(ficha_id)
           ]);
           return jsonResponse({ success: true });
         }
+
         if (path === '/api/admin/agenda' && request.method === 'GET') {
           const { results } = await env.DB.prepare(`
             SELECT e.*, f.nombre as alumno_nombre, f.apellido as alumno_apellido, f.dni_nro as alumno_dni
@@ -150,13 +172,24 @@ export default {
           `).all();
           return jsonResponse(results);
         }
+
         if (path.startsWith('/api/admin/fichas/') && request.method === 'PATCH') {
           const id = path.split('/').pop();
           const updates = await request.json() as any;
-          if (updates.estado || updates.decision_final) {
-            await env.DB.prepare('UPDATE fichas SET estado = COALESCE(?, estado), decision_final = COALESCE(?, decision_final) WHERE id = ?')
-              .bind(updates.estado, updates.decision_final, id).run();
-          }
+          
+          const keys = Object.keys(updates).filter(k => k !== 'id');
+          if (keys.length === 0) return jsonResponse({ success: true });
+
+          // Si es una actualización masiva (no solo estado/decisión), marcar como editado por admin
+          const isFullEdit = keys.some(k => !['estado', 'decision_final', 'observaciones_generales'].includes(k));
+          if (isFullEdit) updates.modificado_admin = 1;
+
+          const setClause = keys.map(k => `${k} = ?`).join(', ');
+          const values = keys.map(k => updates[k]);
+          
+          await env.DB.prepare(`UPDATE fichas SET ${setClause} WHERE id = ?`)
+            .bind(...values, id).run();
+            
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/fichas/') && request.method === 'DELETE') {
@@ -166,9 +199,22 @@ export default {
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'PUT') {
           const id = path.split('/').pop();
-          const { fecha_hora, notas, estado } = await request.json() as any;
-          await env.DB.prepare('UPDATE entrevistas SET fecha_hora = COALESCE(?, fecha_hora), notas = COALESCE(?, notas), estado = COALESCE(?, estado) WHERE id = ?')
-            .bind(fecha_hora, notas, estado, id).run();
+          const { fecha_hora, notas, estado, respuesta } = await request.json() as any;
+          
+          if (fecha_hora) {
+            const newTime = new Date(fecha_hora).getTime();
+            const { results: existing } = await env.DB.prepare('SELECT fecha_hora FROM entrevistas WHERE id != ? AND estado != "cancelada"').bind(id).all();
+            const overlap = existing.some((e: any) => {
+              const et = new Date(e.fecha_hora).getTime();
+              return Math.abs(newTime - et) < 3600000;
+            });
+            if (overlap) {
+              return jsonResponse({ error: 'Superposición con otra entrevista (franja de 1 hora).' }, 400);
+            }
+          }
+
+          await env.DB.prepare('UPDATE entrevistas SET fecha_hora = COALESCE(?, fecha_hora), notas = COALESCE(?, notas), estado = COALESCE(?, estado), respuesta = COALESCE(?, respuesta) WHERE id = ?')
+            .bind(fecha_hora, notas, estado, respuesta, id).run();
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'DELETE') {

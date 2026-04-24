@@ -58,6 +58,7 @@ CREATE TABLE fichas (
   contacto_entrevista_medio TEXT,
   contacto_entrevista_dato TEXT,
   observaciones_generales TEXT,
+  modificado_admin INTEGER DEFAULT 0,
   decision_final TEXT -- 'ingresa', 'no_ingresa', 'espera'
 );
 
@@ -96,6 +97,7 @@ CREATE TABLE padres_tutores (
 CREATE TABLE hermanos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ficha_id INTEGER NOT NULL,
+  vinculo TEXT, -- hermano/a, abuelo/a, tio/a, pareja de madre o padre, otro
   nombre_apellido TEXT,
   dni_nro TEXT,
   fecha_nac TEXT,
@@ -122,5 +124,6 @@ CREATE TABLE entrevistas (
   fecha_hora TEXT NOT NULL,
   estado TEXT DEFAULT 'programada', -- programada, realizada, cancelada, movida
   notas TEXT,
+  respuesta TEXT, -- Respuesta de la familia (confirmado, pide cambio, etc)
   FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
 );
