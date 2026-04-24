@@ -13,7 +13,9 @@ import {
   Edit2,
   Edit3,
   Save,
-  X
+  X,
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
@@ -121,7 +123,7 @@ const BandejaEntrada = ({ token }: { token: string }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState('activos');
   
   const navigate = useNavigate();
 
@@ -139,7 +141,11 @@ const BandejaEntrada = ({ token }: { token: string }) => {
     return fichas.filter(f => {
       const matchSearch = (f.apellido + ' ' + f.nombre + ' ' + f.dni_nro).toLowerCase().includes(search.toLowerCase());
       const matchLevel = filterLevel ? f.nivel_ingreso === filterLevel : true;
-      const matchStatus = filterStatus ? f.estado === filterStatus : true;
+      const matchStatus = filterStatus ? (
+        filterStatus === 'activos' 
+          ? !['finalizado', 'cancelado'].includes(f.estado) 
+          : f.estado === filterStatus
+      ) : true;
       return matchSearch && matchLevel && matchStatus;
     });
   }, [fichas, search, filterLevel, filterStatus]);
@@ -231,6 +237,7 @@ const BandejaEntrada = ({ token }: { token: string }) => {
           </select>
           <select className="form-select" style={{ width: 'auto', minWidth: '180px' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="">Todos los Estados</option>
+            <option value="activos">Solo Activos (Pendientes)</option>
             <option value="pendiente">Pendiente</option>
             <option value="contactado">Contactado</option>
             <option value="entrevista_programada">Entrevista</option>
@@ -250,7 +257,7 @@ const BandejaEntrada = ({ token }: { token: string }) => {
                 <th>Fecha</th>
                 <th>Alumno</th>
                 <th>Nivel / Año</th>
-                <th>Estado</th>
+                <th>Estado / Resolución</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -260,7 +267,15 @@ const BandejaEntrada = ({ token }: { token: string }) => {
                   <td>{new Date(f.fecha_solicitud).toLocaleDateString()}</td>
                   <td style={{ fontWeight: 600 }}>{f.apellido}, {f.nombre}</td>
                   <td>{f.nivel_ingreso} <br/> <small style={{color:'var(--text-muted)'}}>{f.grado_anio}</small></td>
-                  <td><span className={`badge badge-${f.estado}`}>{f.estado.replace('_', ' ')}</span></td>
+                  <td>
+                    <span className={`badge badge-${f.estado}`}>{f.estado.replace('_', ' ')}</span>
+                    {f.decision_final && (
+                      <div style={{fontSize: '0.75rem', fontWeight: 700, marginTop: '0.25rem'}}>
+                        {f.decision_final === 'ingresa' ? '✅ Ingresa' : (f.decision_final === 'no_ingresa' ? '❌ No ingresa' : '⏳ Espera')}
+                        {f.motivo_finalizacion && <span style={{fontWeight: 400, color: 'var(--text-muted)'}}> ({f.motivo_finalizacion})</span>}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <button className="btn btn-ghost" onClick={() => navigate(`/admin/ficha/${f.id}`)}>
                       Ver Detalles <ChevronRight size={16} />
@@ -455,6 +470,22 @@ const DetalleFicha = ({ token }: { token: string }) => {
     await handleUpdateEntrevista(entrevistaId, { estado: 'cancelada' });
   };
 
+  const handleDeleteFicha = async () => {
+    if (!confirm('🚨 ATENCIÓN: ¿Está seguro de que desea eliminar permanentemente esta ficha? Esta acción NO se puede deshacer.')) return;
+    setSavingStatus(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/fichas/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al eliminar');
+      navigate('/admin');
+    } catch (e) {
+      alert('Error al eliminar la ficha');
+      setSavingStatus(false);
+    }
+  };
+
   const handleSaveEdit = async () => {
     setSavingStatus(true);
     try {
@@ -610,6 +641,9 @@ const DetalleFicha = ({ token }: { token: string }) => {
               <Save size={18} /> Guardar Cambios
             </button>
           )}
+          <button className="btn btn-ghost" onClick={handleDeleteFicha} style={{ color: 'var(--error)' }}>
+            <Trash2 size={18} /> Eliminar Ficha
+          </button>
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -661,6 +695,24 @@ const DetalleFicha = ({ token }: { token: string }) => {
                 <option value="espera">⏳ LISTA DE ESPERA</option>
               </select>
             </div>
+            {(data.ficha.estado === 'finalizado' || data.ficha.decision_final === 'no_ingresa') && (
+              <div className="animate-in">
+                <label className="form-label">Motivo de Decisión / Cierre</label>
+                <select 
+                  className="form-select" 
+                  value={data.ficha.motivo_finalizacion || ''} 
+                  disabled={savingStatus}
+                  onChange={e => updateFicha({ motivo_finalizacion: e.target.value })}
+                >
+                  <option value="">Seleccionar motivo...</option>
+                  <option value="Desistieron">Desistieron</option>
+                  <option value="Rechazamos">Rechazamos</option>
+                  <option value="No contestan">No contestan</option>
+                  <option value="Falta documentación">Falta documentación</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="form-label">DNI Alumno</label>
               <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)' }}>{data.ficha.dni_nro}</div>

@@ -59,7 +59,8 @@ CREATE TABLE fichas (
   contacto_entrevista_dato TEXT,
   observaciones_generales TEXT,
   modificado_admin INTEGER DEFAULT 0,
-  decision_final TEXT -- 'ingresa', 'no_ingresa', 'espera'
+  decision_final TEXT, -- 'ingresa', 'no_ingresa', 'espera'
+  motivo_finalizacion TEXT -- Desistieron, Rechazamos, No contestan, etc.
 );
 
 CREATE TABLE escolaridad (

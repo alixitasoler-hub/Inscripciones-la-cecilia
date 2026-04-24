@@ -45,3 +45,19 @@ vinculo (hermano/a, abuelo/a, tio/a, pareja de madre o padre, otro -> cuál), no
 En la parte administrativa:
 - que no se puedan superponer las entrevistas. Debe haber una franja de 1 hora ocupada entre reuniones.
 - la ficha de inscripción debe poder ser editada por admin (en caso de que haya que modificar algun dato erroeo o faltante). Tal vez las modificaciones podrían diferenciarse con fuentes distintas o itálica o algo así.
+
+En la parte de administración:
+-aviso vía email a laceciliasecretaria@gmail.com de que llegó una solicitud (no está llegando actualmente)
+-el texto del mensaje de whatsapp sería: 
+"¡Hola!
+Hemos recibido la solicitud de inscripción de [alumno/a]. Les proponemos realizar la entrevista el día [fecha] a las [hora].
+Les pedimos, por favor, que confirmen la disponibilidad para ese horario. En caso de no poder asistir, agradeceremos que nos avisen con anticipación por este mismo medio.
+Muchas gracias."
+-poder registrar la respuesta a la fecha de entrevista
+-poder editar la agenda en caso de que haya que cambiar fecha/horario o cancelar la entrevista
+
+- desde admin poder eliminar una ficha (por ejemplo, en caso de estar repetidas)
+-una vez realizada la entrevista visualizar por defecto aquellas que estén pendientes de ingreso o respuesta y las ya efectuadas que sean filtradas (con opción a verlas, por supuesto). También debería estar indicado, en este ultimo caso, si ingresaron o no (y en este caso, la razón: desistieron, rechazamos, no contestan)
+-Al cargar la ficha, si un campo esta equivocado o ya registrado (por ejemplo, ya existe alguien con el mismo DNI), además del mensaje, que se resalte el campo a corregir
+-el domicilio tanto de alumno como de adultos debe estar desdoblado en dirección, localidad, provincia, país, código postal
+

@@ -40,7 +40,9 @@ export default {
         const body = await request.json() as any;
         const { ficha, escolaridad, padres, hermanos, convivientes } = body;
         
-        const resFicha = await env.DB.prepare(`
+        const cleanBind = (stmt: any, ...args: any[]) => stmt.bind(...args.map(v => v === undefined ? null : v));
+
+        const resFicha = await cleanBind(env.DB.prepare(`
           INSERT INTO fichas (
             apellido, nombre, dni_tipo, dni_nro, sexo, fecha_nac, lugar_nac,
             direccion, localidad, provincia, pais, cp, telefono_alumno, email_alumno,
@@ -50,7 +52,7 @@ export default {
             contacto_entrevista_nombre, contacto_entrevista_medio, contacto_entrevista_dato,
             observaciones_generales, ciclo_lectivo
           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        `).bind(
+        `),
           ficha.apellido, ficha.nombre, ficha.dni_tipo, ficha.dni_nro, ficha.sexo, ficha.fecha_nac, ficha.lugar_nac,
           ficha.direccion, ficha.localidad, ficha.provincia, ficha.pais, ficha.cp, ficha.telefono_alumno, ficha.email_alumno,
           ficha.nivel_ingreso, ficha.grado_anio, ficha.repitente ? 1 : 0, ficha.salud_detalles, ficha.embarazo_parto,
@@ -64,27 +66,28 @@ export default {
         const batch = [];
         if (escolaridad?.length) {
           for (const esc of escolaridad) {
-            batch.push(env.DB.prepare('INSERT INTO escolaridad (ficha_id, nivel, anio_cursado, escuela, observaciones) VALUES (?,?,?,?,?)')
-              .bind(fichaId, esc.nivel, esc.anio_cursado, esc.escuela, esc.observaciones));
+            batch.push(cleanBind(env.DB.prepare('INSERT INTO escolaridad (ficha_id, nivel, anio_cursado, escuela, observaciones) VALUES (?,?,?,?,?)'),
+              fichaId, esc.nivel, esc.anio_cursado, esc.escuela, esc.observaciones));
           }
         }
         if (padres?.length) {
           for (const p of padres) {
-            batch.push(env.DB.prepare(`
+            batch.push(cleanBind(env.DB.prepare(`
               INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, domicilio_datos, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            `).bind(fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.domicilio_datos, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
-        } }
+            `), fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.domicilio_datos, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
+          }
+        }
         if (hermanos?.length) {
           for (const h of hermanos) {
-            batch.push(env.DB.prepare('INSERT INTO hermanos (ficha_id, vinculo, nombre_apellido, dni_nro, fecha_nac, estado_civil, estudios_escuela, domicilio_ocupacion, ocupacion) VALUES (?,?,?,?,?,?,?,?,?)')
-              .bind(fichaId, h.vinculo, h.nombre_apellido, h.dni_nro, h.fecha_nac, h.estado_civil, h.estudios_escuela, h.domicilio_ocupacion, h.ocupacion));
+            batch.push(cleanBind(env.DB.prepare('INSERT INTO hermanos (ficha_id, vinculo, nombre_apellido, dni_nro, fecha_nac, estado_civil, estudios_escuela, domicilio_ocupacion, ocupacion) VALUES (?,?,?,?,?,?,?,?,?)'),
+              fichaId, h.vinculo, h.nombre_apellido, h.dni_nro, h.fecha_nac, h.estado_civil, h.estudios_escuela, h.domicilio_ocupacion, h.ocupacion));
           }
         }
         if (convivientes?.length) {
           for (const c of convivientes) {
-            batch.push(env.DB.prepare('INSERT INTO convivientes (ficha_id, nombre_apellido, vinculo, edad, observaciones) VALUES (?,?,?,?,?)')
-              .bind(fichaId, c.nombre_apellido, c.vinculo, c.edad, c.observaciones));
+            batch.push(cleanBind(env.DB.prepare('INSERT INTO convivientes (ficha_id, nombre_apellido, vinculo, edad, observaciones) VALUES (?,?,?,?,?)'),
+              fichaId, c.nombre_apellido, c.vinculo, c.edad, c.observaciones));
           }
         }
 
