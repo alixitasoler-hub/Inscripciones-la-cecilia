@@ -271,37 +271,80 @@ const FormularioIngreso = () => {
     </div>
   );
 
-  const getFieldClass = (name: string, index?: number) => `form-input ${fieldErrors.includes(index !== undefined ? 'p' + index + '_' + name : name) ? 'error' : ''}`;
-  const getSelectClass = (name: string, index?: number) => `form-select ${fieldErrors.includes(index !== undefined ? 'p' + index + '_' + name : name) ? 'error' : ''}`;
+  const getFieldClass = (name: string, index?: number) => {
+    const errorKey = index !== undefined ? 'p' + index + '_' + name : name;
+    const isError = fieldErrors.includes(errorKey);
+    const value = index !== undefined ? (data.padres as any)[index][name] : (data.ficha as any)[name];
+    const isSuccess = !isError && value !== '' && value !== undefined && value !== null;
+    return `form-input ${isError ? 'input-error' : ''} ${isSuccess ? 'input-success' : ''}`;
+  };
+  const getSelectClass = (name: string, index?: number) => {
+    const errorKey = index !== undefined ? 'p' + index + '_' + name : name;
+    const isError = fieldErrors.includes(errorKey);
+    const value = index !== undefined ? (data.padres as any)[index][name] : (data.ficha as any)[name];
+    const isSuccess = !isError && value !== '' && value !== undefined && value !== null;
+    return `form-select ${isError ? 'input-error' : ''} ${isSuccess ? 'input-success' : ''}`;
+  };
 
   return (
-    <div className="card animate-in" style={{ maxWidth: '900px', margin: '0 auto', borderTop: 'none' }}>
-      <div className="flex justify-between items-start mb-10" style={{ paddingBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
+    <div className="card animate-in" style={{ maxWidth: '900px', margin: '0 auto', borderTop: 'none', padding: '1.5rem' }}>
+      <div className="flex justify-between items-start mb-4" style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-4">
-          <img src="/logo.jpg" alt="Logo La Cecilia" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+          <img src="/logo.jpg" alt="Logo La Cecilia" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
           <div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem', letterSpacing: '-0.025em' }}>Ficha de Inscripción</h2>
-            <div className="flex items-center gap-2 text-muted" style={{fontSize: '0.875rem', fontWeight: 600}}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0', letterSpacing: '-0.025em' }}>Ficha de Inscripción</h2>
+            <div className="flex items-center gap-2 text-muted" style={{fontSize: '0.75rem', fontWeight: 600}}>
               <Calendar size={14} />
               Ciclo Lectivo {data.ficha.ciclo_lectivo}
             </div>
           </div>
         </div>
-        <button onClick={handleSalir} className="btn btn-ghost" style={{ color: 'var(--error)', fontWeight: 700 }}>Salir</button>
+        <button onClick={handleSalir} className="btn btn-ghost" style={{ color: 'var(--error)', fontWeight: 700, padding: '0.5rem' }}>Salir</button>
       </div>
 
-      <div className="wizard-progress">
-        {STEPS.map(s => (
-          <div key={s.id} className={`wizard-step ${currentStep === s.id ? 'active' : (currentStep > s.id ? 'completed' : '')}`}>
-            {currentStep > s.id ? <CheckCircle2 size={24} /> : s.icon}
-            <span className="step-label">{s.label}</span>
+      {!data.ficha.ciclo_lectivo ? (
+        <div className="card animate-in" style={{ padding: '2rem', background: 'var(--bg-main)', border: '2px dashed var(--border-color)', margin: '2rem 0', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="flex items-center gap-3">
+            <Calendar size={24} color="var(--primary)" />
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>¿Para qué ciclo lectivo solicita el ingreso?</h3>
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
+            {[new Date().getFullYear(), new Date().getFullYear() + 1].map(anio => (
+              <label key={anio} className={`btn ${data.ficha.ciclo_lectivo == anio ? 'btn-secondary' : 'btn-outline'}`} style={{ cursor: 'pointer', padding: '1rem 3rem', fontSize: '1.125rem', borderColor: data.ficha.ciclo_lectivo != anio ? 'var(--secondary)' : '', color: data.ficha.ciclo_lectivo != anio ? 'var(--secondary)' : '' }}>
+                <input 
+                  type="radio" 
+                  name="ciclo_lectivo" 
+                  value={anio} 
+                  checked={data.ficha.ciclo_lectivo == anio}
+                  onChange={handleFichaChange}
+                  style={{ display: 'none' }}
+                />
+                Ciclo {anio}
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="wizard-progress">
+            {STEPS.map(s => (
+              <div key={s.id} className={`wizard-step ${currentStep === s.id ? 'active' : (currentStep > s.id ? 'completed' : '')}`}>
+                {currentStep > s.id ? <CheckCircle2 size={24} /> : s.icon}
+                <span className="step-label">{s.label}</span>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mobile-progress-container animate-in">
+            <div className="mobile-progress-text">Paso {currentStep} de {STEPS.length} - {STEPS[currentStep-1].label}</div>
+            <div className="mobile-progress-bar">
+              <div className="mobile-progress-fill" style={{ width: `${(currentStep / STEPS.length) * 100}%` }}></div>
+            </div>
+          </div>
 
-      <div style={{ marginTop: '4rem' }}>
+          <div style={{ marginTop: '1.5rem' }}>
         {error && (
-          <div className="animate-in" style={{ marginBottom: '2.5rem', background: '#FEF2F2', border: '1px solid #FEE2E2', padding: '1.25rem', borderRadius: 'var(--radius-md)', color: '#991B1B', display: 'flex', gap: '1rem', alignItems: 'center', fontWeight: 500 }}>
+          <div className="animate-in" style={{ marginBottom: '1.5rem', background: '#FEF2F2', border: '1px solid #FEE2E2', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: '#991B1B', display: 'flex', gap: '1rem', alignItems: 'center', fontWeight: 500 }}>
             <AlertCircle size={24} /> {error}
           </div>
         )}
@@ -309,30 +352,9 @@ const FormularioIngreso = () => {
         {/* PASO 1 */}
         {currentStep === 1 && (
           <section className="animate-in">
-            <div className="card" style={{ padding: '2rem', background: 'var(--accent-soft)', border: 'none', marginBottom: '2.5rem', display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', justifyContent: 'center' }}>
-              <div className="flex items-center gap-3">
-                <Calendar size={24} color="var(--primary)" />
-                <label className="form-label" style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>¿Para qué año solicita el ingreso? *</label>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                {[new Date().getFullYear(), new Date().getFullYear() + 1].map(anio => (
-                  <label key={anio} className={`btn ${data.ficha.ciclo_lectivo == anio ? 'btn-primary' : 'btn-outline'}`} style={{ cursor: 'pointer', padding: '0.75rem 2rem' }}>
-                    <input 
-                      type="radio" 
-                      name="ciclo_lectivo" 
-                      value={anio} 
-                      checked={data.ficha.ciclo_lectivo == anio}
-                      onChange={handleFichaChange}
-                      style={{ display: 'none' }}
-                    />
-                    Ciclo {anio}
-                  </label>
-                ))}
-              </div>
-            </div>
 
             <h3 className="section-title">Datos Personales del Alumno</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
               <div className="form-group"><label className="form-label">Apellido(s) *</label><input className={getFieldClass('apellido')} name="apellido" value={data.ficha.apellido} onChange={handleFichaChange} placeholder="Escriba los apellidos..." /></div>
               <div className="form-group"><label className="form-label">Nombre(s) *</label><input className={getFieldClass('nombre')} name="nombre" value={data.ficha.nombre} onChange={handleFichaChange} placeholder="Escriba los nombres..." /></div>
               <div className="form-group">
@@ -431,7 +453,7 @@ const FormularioIngreso = () => {
 
                 return (
                   <div key={idx} className="card animate-in" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderLeft: isFixed ? '4px solid var(--primary)' : '4px solid var(--accent)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 40px', gap: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
                       <div>
                         <label className="form-label" style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Nivel / Grado</label>
                         {isFixed ? (
@@ -490,7 +512,7 @@ const FormularioIngreso = () => {
               <label className="form-label">Información Médica Relevante</label>
               <textarea className="form-textarea" name="salud_detalles" placeholder="Indique alergias, enfermedades crónicas, medicamentos o atenciones especiales..." value={data.ficha.salud_detalles} onChange={handleFichaChange} rows={4} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div className="form-group"><label className="form-label">Obra Social / Prepaga</label><input className="form-input" name="obra_social" value={data.ficha.obra_social} onChange={handleFichaChange} placeholder="Nombre de la cobertura..." /></div>
               <div className="form-group">
                  <label className="form-label">¿Posee CUD (Discapacidad)?</label>
@@ -545,7 +567,7 @@ const FormularioIngreso = () => {
                    </div>
                    {data.padres.length > 1 && <button onClick={() => removeFromArray('padres', idx)} className="btn btn-ghost" style={{color:'var(--error)'}}><Trash2 size={20} /></button>}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Vínculo / Relación con el alumno *</label>
                       <div className="flex gap-4">
@@ -581,7 +603,7 @@ const FormularioIngreso = () => {
                     <p style={{fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>A esta persona contactaremos para coordinar la cita.</p>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
                    <div className="form-group">
                       <label className="form-label">Nombre de Contacto *</label>
                       <input className={getFieldClass('contacto_entrevista_nombre')} name="contacto_entrevista_nombre" placeholder="Nombre de la persona a contactar" value={data.ficha.contacto_entrevista_nombre} onChange={handleFichaChange} />
@@ -665,7 +687,7 @@ const FormularioIngreso = () => {
               </table>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', marginTop: '3rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <div className="form-group">
                     <label className="form-label" style={{fontSize: '1rem'}}>Situación Socioeconómica</label>
                     <select className={getSelectClass('situacion_socioeconomica')} name="situacion_socioeconomica" value={data.ficha.situacion_socioeconomica} onChange={handleFichaChange}>
@@ -697,46 +719,46 @@ const FormularioIngreso = () => {
               
               <p className="mb-4">La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>ADMISIÓN</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>ADMISIÓN</h5>
               <p className="mb-4">La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones.</p>
               <p className="mb-4">Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>BUEN TRATO</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>BUEN TRATO</h5>
               <p className="mb-4">No se permitirá ningún tipo de trato violento, físico ni verbal, como burlas, discriminación, bullying, etc. tanto dentro como fuera de la Escuela. Estas conductas serán informadas y conversadas con las familias y se exigirán seguimientos en cada caso.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>EXPECTATIVAS ACADÉMICAS</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>EXPECTATIVAS ACADÉMICAS</h5>
               <p className="mb-4">Las familias, alumnos y alumnas deben comprender y aceptar que no resulta lógico ni posible que todos lleguen a los mismos resultados en sus aprendizajes académicos, ya que ello dependerá de sus intereses y capacidades.</p>
               <p className="mb-4">El propósito educativo de la Escuela es colaborar para que cada alumno o alumna pueda conocerse a sí mismo, conocer sus intereses y capacidades y desarrollarlos de la mejor manera, para poder hacer de ellos un medio de vida dentro de un proyecto vital con sentido social. Para los propósitos enunciados se les brindarán las opciones académicas correspondientes y el apoyo necesario. Los alumnos y alumnas podrán elegir las actividades que realizan y proponer otras que no se estén realizando. En todos los casos la tutoría de la Escuela, junto a educadores, hará un seguimiento de cada alumno o alumna, para lo cual se llevará un registro detallado de las actividades.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>MODO DE VIDA - ALIMENTACIÓN</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>MODO DE VIDA - ALIMENTACIÓN</h5>
               <p className="mb-4">La Escuela propone un modo de vida que contribuya a la salud física y psicológica. Se propone una dieta vegetariana y natural que excluye las carnes de todo tipo y sus derivados, bebidas alcohólicas, gaseosas y golosinas, así como otros alimentos con exceso de dulces o de sal. Tanto en el predio de la Escuela como durante salidas, reuniones, actividades escolares o cualquier otra actividad donde participen grupalmente los alumnos y alumnas se respetará la alimentación vegetariana y los hábitos propuestos. El cumplimiento de esta dieta no es de exigencia en el hogar, pero se solicita a las familias que colaboren para que sus hijos o hijas adopten conscientemente una forma de vida que contribuya a cuidar su salud. En el mismo sentido, no se deben ingresar a la escuela alimentos que no respondan a las pautas de cuidado de la salud que se recomiendan.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CIGARRILLO, ALCOHOL, DROGAS</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CIGARRILLO, ALCOHOL, DROGAS</h5>
               <p className="mb-4">Se consideran dañinos para la salud el tabaco, alcohol u otras drogas, por lo cual alumnos y alumnas deben comprometerse a no consumirlos en ningún momento, dentro o fuera de la escuela. Se solicita a las familias que colaboren para que sus hijos o hijas no se conviertan en consumidores de estos elementos perjudiciales para la salud y generadores de tantos trastornos sociales.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>ACCESORIOS</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>ACCESORIOS</h5>
               <p className="mb-4">Hay jóvenes que suelen utilizar accesorios (algunos tipos de piercings, muñequeras, cadenas, expansores, etc.) que implican un riesgo para la seguridad y salud propia y de sus compañeros o compañeras, pero además son representativos de condicionamientos sobre los que la Escuela está fuertemente interesada en trabajar. Por lo tanto, los alumnos y alumnas convendrán no usar accesorios que no sean consensuados con la escuela y la familia, dentro ni fuera de ella. No obstante, se podrán revisar estas restricciones en todo momento a través de los mecanismos orgánicos colectivos disponibles, tales como las Asambleas.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>BOLICHES, VIDA NOCTURNA</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>BOLICHES, VIDA NOCTURNA</h5>
               <p className="mb-4">Los alumnos y alumnas de la Escuela se comprometerán a no asistir a pubs, boliches o lugares similares, ya que no son ambientes convenientes para adolescentes, ni son acordes a la forma de vida propuesta.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>HORARIO Y ASISTENCIA</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>HORARIO Y ASISTENCIA</h5>
               <p className="mb-4">La Escuela considera imprescindible que alumnos y alumnas participen con regularidad y puntualidad a las actividades de la vida escolar. Se evitarán las inasistencias reiteradas y las reincorporaciones que deban gestionarse -con motivo de alcanzar la cantidad de faltas permitidas por el reglamento- se autorizarán solamente en caso de que estén debidamente justificadas por enfermedad u otras circunstancias graves que las ameriten.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>SANCIONES</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>SANCIONES</h5>
               <p className="mb-4">No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos.</p>
               <p className="mb-4">Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h5>
               <p className="mb-4">Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
 
-              <h5 style={{marginTop: '2rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CUOTAS</h5>
+              <h5 style={{marginTop: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', fontSize: '1rem'}}>CUOTAS</h5>
               <p className="mb-4">Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
               
               <p style={{marginTop: '2.5rem', fontStyle: 'italic', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>Este documento tiene carácter de declaración jurada.</p>
             </div>
             
-            <label className="flex items-center gap-4 mt-10" style={{ background: 'rgba(252, 163, 17, 0.05)', padding: '1.5rem 2rem', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '2px solid rgba(252, 163, 17, 0.2)', transition: 'all 0.3s' }}>
+            <label className="flex items-center gap-4 mt-10" style={{ background: 'var(--accent-soft)', padding: '1.5rem 2rem', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '2px solid var(--accent-glow)', transition: 'all 0.3s' }}>
               <input 
                 type="checkbox" 
                 style={{ width: '24px', height: '24px', cursor: 'pointer' }} 
@@ -760,16 +782,18 @@ const FormularioIngreso = () => {
           <div style={{ marginLeft: 'auto' }}>
             {currentStep < STEPS.length ? (
               <button className="btn btn-primary" onClick={nextStep} style={{ padding: '0.875rem 2.5rem' }}>
-                Siguiente Pasos <ChevronRight size={18} />
+                Siguiente Paso <ChevronRight size={18} />
               </button>
             ) : (
-              <button className="btn btn-accent" onClick={handleSubmit} disabled={loading || !terminosAceptados} style={{ padding: '1rem 3rem', fontSize: '1.1rem', animation: terminosAceptados ? 'pulse-soft 2s infinite' : 'none' }}>
+              <button className={`btn btn-accent ${loading ? 'btn-loading' : ''}`} onClick={handleSubmit} disabled={loading || !terminosAceptados} style={{ padding: '1rem 3rem', fontSize: '1.1rem', animation: terminosAceptados && !loading ? 'pulse-soft 2s infinite' : 'none' }}>
                 {loading ? 'Procesando Envío...' : 'Finalizar y Enviar Solicitud'}
               </button>
             )}
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

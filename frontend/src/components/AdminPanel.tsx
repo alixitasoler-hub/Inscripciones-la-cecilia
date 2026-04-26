@@ -15,7 +15,8 @@ import {
   Save,
   X,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
@@ -97,11 +98,6 @@ const AdminPanel = () => {
               </button>
             </nav>
           </div>
-          
-          <div className="card" style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'var(--primary)', color: 'white' }}>
-            <h4 style={{ color: 'white', fontSize: '0.875rem' }}>Ayuda</h4>
-            <p style={{ fontSize: '0.8125rem', opacity: 0.8, marginTop: '0.5rem' }}>Si tiene problemas con el sistema, contacte al soporte técnico.</p>
-          </div>
         </aside>
       )}
 
@@ -124,6 +120,7 @@ const BandejaEntrada = ({ token }: { token: string }) => {
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterStatus, setFilterStatus] = useState('activos');
+  const [confirmStateChange, setConfirmStateChange] = useState<{id: number, newState: string} | null>(null);
   
   const navigate = useNavigate();
 
@@ -149,15 +146,6 @@ const BandejaEntrada = ({ token }: { token: string }) => {
       return matchSearch && matchLevel && matchStatus;
     });
   }, [fichas, search, filterLevel, filterStatus]);
-
-  const stats = useMemo(() => {
-    return {
-      total: fichas.length,
-      pendientes: fichas.filter(f => f.estado === 'pendiente').length,
-      programadas: fichas.filter(f => f.estado === 'entrevista_programada').length,
-      finalizadas: fichas.filter(f => f.estado === 'finalizado').length
-    };
-  }, [fichas]);
 
   const exportToCSV = () => {
     if (filteredFichas.length === 0) return;
@@ -195,25 +183,6 @@ const BandejaEntrada = ({ token }: { token: string }) => {
         <button onClick={exportToCSV} className="btn btn-outline" disabled={filteredFichas.length === 0}>
           <Download size={18} /> Exportar CSV
         </button>
-      </div>
-
-      <div className="stat-grid">
-        <div className="stat-card">
-          <span className="stat-label">Total Solicitudes</span>
-          <span className="stat-value">{stats.total}</span>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent)' }}>
-          <span className="stat-label">Pendientes</span>
-          <span className="stat-value">{stats.pendientes}</span>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--info)' }}>
-          <span className="stat-label">Entrevistas</span>
-          <span className="stat-value">{stats.programadas}</span>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
-          <span className="stat-label">Finalizadas</span>
-          <span className="stat-value">{stats.finalizadas}</span>
-        </div>
       </div>
 
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -268,7 +237,18 @@ const BandejaEntrada = ({ token }: { token: string }) => {
                   <td style={{ fontWeight: 600 }}>{f.apellido}, {f.nombre}</td>
                   <td>{f.nivel_ingreso} <br/> <small style={{color:'var(--text-muted)'}}>{f.grado_anio}</small></td>
                   <td>
-                    <span className={`badge badge-${f.estado}`}>{f.estado.replace('_', ' ')}</span>
+                    <select 
+                      className={`form-select badge badge-${f.estado}`} 
+                      style={{ padding: '0.25rem 1.5rem 0.25rem 0.5rem', appearance: 'auto', border: '1px solid transparent', cursor: 'pointer', outline: 'none' }} 
+                      value={f.estado} 
+                      onChange={e => setConfirmStateChange({ id: f.id, newState: e.target.value })}
+                    >
+                      <option value="pendiente">Pendiente</option>
+                      <option value="contactado">Contactado</option>
+                      <option value="entrevista_programada">Entrevista</option>
+                      <option value="finalizado">Finalizado</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
                     {f.decision_final && (
                       <div style={{fontSize: '0.75rem', fontWeight: 700, marginTop: '0.25rem'}}>
                         {f.decision_final === 'ingresa' ? '✅ Ingresa' : (f.decision_final === 'no_ingresa' ? '❌ No ingresa' : '⏳ Espera')}
@@ -277,9 +257,14 @@ const BandejaEntrada = ({ token }: { token: string }) => {
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-ghost" onClick={() => navigate(`/admin/ficha/${f.id}`)}>
-                      Ver Detalles <ChevronRight size={16} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button className="btn btn-ghost" style={{ padding: '0.5rem', color: '#25D366' }} title="WhatsApp" onClick={() => window.open(`https://wa.me/${(f.contacto_entrevista_dato||'').replace(/\D/g,'')}?text=Hola ${f.contacto_entrevista_nombre}, nos comunicamos de La Cecilia...`, '_blank')}>
+                        <MessageCircle size={18} />
+                      </button>
+                      <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.8125rem' }} onClick={() => navigate(`/admin/ficha/${f.id}`)}>
+                        Ver <ChevronRight size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -294,6 +279,39 @@ const BandejaEntrada = ({ token }: { token: string }) => {
           </table>
         )}
       </div>
+
+      {confirmStateChange && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="card animate-in" style={{ padding: '2.5rem', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+            <AlertCircle size={48} color="var(--warning)" style={{ margin: '0 auto 1.5rem' }} />
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>¿Cambiar Estado?</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+              Estás a punto de cambiar el estado de la ficha a <strong style={{color: 'var(--primary)'}}>{confirmStateChange.newState.replace('_', ' ').toUpperCase()}</strong>.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button className="btn btn-outline" onClick={() => setConfirmStateChange(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={async () => {
+                setLoading(true);
+                try {
+                  await fetch(`${API_URL}/admin/fichas/${confirmStateChange.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ estado: confirmStateChange.newState })
+                  });
+                  const res = await fetch(`${API_URL}/admin/fichas`, { headers: { 'Authorization': `Bearer ${token}` } });
+                  const data = await res.json();
+                  setFichas(data);
+                } catch (e) {
+                  alert('Error al cambiar estado');
+                } finally {
+                  setConfirmStateChange(null);
+                  setLoading(false);
+                }
+              }}>Sí, cambiar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -783,9 +801,24 @@ const DetalleFicha = ({ token }: { token: string }) => {
           </div>
         </section>
 
+        {/* NOTAS INTERNAS */}
+        <section className="section-print animate-in no-break" style={{ marginTop: '2.5rem' }}>
+          <h3 className="section-title-print" style={{ background: 'var(--primary) !important' }}>III. Notas Administrativas (Uso Interno)</h3>
+          <div className="card" style={{ border: 'none', padding: '1rem', background: '#FEF9C3', borderRadius: '0 0 4px 4px' }}>
+            <textarea 
+              className="form-textarea" 
+              style={{ background: 'transparent', border: 'none', resize: 'vertical', minHeight: '150px', fontSize: '0.9375rem', padding: 0 }} 
+              placeholder="Escribe aquí las minutas de entrevistas, comentarios o seguimientos internos... (Se guarda automáticamente al hacer clic fuera)"
+              value={data.ficha.observaciones_generales || ''}
+              onChange={e => setData({...data, ficha: {...data.ficha, observaciones_generales: e.target.value}})}
+              onBlur={e => updateFicha({ observaciones_generales: e.target.value })}
+            />
+          </div>
+        </section>
+
         {/* ESCOLARIDAD */}
-        <section className="section-print animate-in">
-          <h3 className="section-title-print">II. Antecedentes Escolares</h3>
+        <section className="section-print animate-in" style={{ marginTop: '2.5rem' }}>
+          <h3 className="section-title-print">IV. Antecedentes Escolares</h3>
           <div>
             <table className="admin-table" style={{ border: 'none' }}>
               <thead><tr><th>Grado / Nivel</th><th>Institución / Escuela</th><th>Año(s)</th></tr></thead>
