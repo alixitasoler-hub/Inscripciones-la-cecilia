@@ -391,6 +391,35 @@ h1, h2, h3, h4, h5, h6 {
   .mobile-progress-container {
     display: block;
   }
+  .container {
+    padding: 0 1rem;
+  }
+  .card {
+    padding: 1.25rem 1rem;
+    border-radius: 8px;
+  }
+  .admin-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 0.5rem;
+  }
+  .card {
+    padding: 1rem 0.75rem;
+    border-radius: 4px;
+    border-left: none;
+    border-right: none;
+  }
+  .section-title {
+    font-size: 1rem;
+  }
+  .btn {
+    width: 100%; /* Botones a ancho completo en móviles muy pequeños */
+  }
 }
 
 /* Admin Dashboard Elements */

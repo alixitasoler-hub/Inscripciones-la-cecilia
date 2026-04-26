@@ -287,7 +287,7 @@ const FormularioIngreso = () => {
   };
 
   return (
-    <div className="card animate-in" style={{ maxWidth: '900px', margin: '0 auto', borderTop: 'none', padding: '1.5rem' }}>
+    <div className="card animate-in" style={{ maxWidth: '900px', margin: '0 auto', borderTop: 'none' }}>
       <div className="flex justify-between items-start mb-4" style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-4">
           <img src="/logo.jpg" alt="Logo La Cecilia" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
