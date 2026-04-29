@@ -9,7 +9,7 @@ export interface Env {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -170,7 +170,9 @@ export default {
 
         if (path === '/api/admin/agenda' && request.method === 'GET') {
           const { results } = await env.DB.prepare(`
-            SELECT e.*, f.nombre as alumno_nombre, f.apellido as alumno_apellido, f.dni_nro as alumno_dni
+            SELECT e.*,
+              f.nombre as alumno_nombre, f.apellido as alumno_apellido, f.dni_nro as alumno_dni,
+              f.contacto_entrevista_medio, f.contacto_entrevista_dato, f.contacto_entrevista_nombre
             FROM entrevistas e JOIN fichas f ON e.ficha_id = f.id ORDER BY e.fecha_hora ASC
           `).all();
           return jsonResponse(results);

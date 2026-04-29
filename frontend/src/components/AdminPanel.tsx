@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Users, 
@@ -10,7 +10,6 @@ import {
   Clock,
   Printer,
   MessageCircle,
-  Edit2,
   Edit3,
   Save,
   X,
@@ -319,69 +318,241 @@ const BandejaEntrada = ({ token }: { token: string }) => {
 const Agenda = ({ token }: { token: string }) => {
   const [entrevistas, setEntrevistas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<'proximas' | 'realizadas' | 'canceladas'>('proximas');
+  const [expandedReschedule, setExpandedReschedule] = useState<number | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const cargar = () => {
+    setLoading(true);
     fetch(`${API_URL}/admin/agenda`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
-      .then(data => {
-        setEntrevistas(data);
-        setLoading(false);
-      })
+      .then(data => { setEntrevistas(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  };
+
+  useEffect(() => { cargar(); }, [token]);
+
+  const handleCambiarEstado = async (id: number, estado: string) => {
+    const msg = estado === 'cancelada' ? '¿Cancelar esta entrevista?' : '¿Marcar como realizada?';
+    if (!confirm(msg)) return;
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/admin/entrevistas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ estado })
+      });
+      cargar();
+    } catch { alert('Error al actualizar'); }
+    finally { setSaving(false); }
+  };
+
+  const handleReprogramar = async (id: number) => {
+    if (!rescheduleDate) return alert('Seleccione una nueva fecha y hora');
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/entrevistas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ fecha_hora: rescheduleDate })
+      });
+      if (!res.ok) { const err = await res.json() as any; throw new Error(err.error || 'Error al reprogramar'); }
+      setExpandedReschedule(null);
+      setRescheduleDate('');
+      cargar();
+    } catch (e: any) { alert(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const getWALink = (e: any) => {
+    if (e.contacto_entrevista_medio !== 'WhatsApp' || !e.contacto_entrevista_dato) return null;
+    const fecha = new Date(e.fecha_hora).toLocaleDateString('es-AR');
+    const hora = new Date(e.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const alumno = `${e.alumno_nombre} ${e.alumno_apellido}`;
+    const texto = `¡Hola!%0AHemos recibido la solicitud de inscripción de ${alumno}. Les proponemos realizar la entrevista el día ${fecha} a las ${hora}.%0ALes pedimos confirmar disponibilidad. En caso de no poder, avísennos con anticipación.%0AMuchas gracias.`;
+    return `https://wa.me/${e.contacto_entrevista_dato.replace(/\D/g, '')}?text=${texto}`;
+  };
+
+  const proximas = entrevistas.filter(e => e.estado === 'programada' || e.estado === 'movida');
+  const realizadas = entrevistas.filter(e => e.estado === 'realizada');
+  const canceladas = entrevistas.filter(e => e.estado === 'cancelada');
+
+  const TABS = [
+    { key: 'proximas' as const, label: 'Próximas', count: proximas.length },
+    { key: 'realizadas' as const, label: 'Realizadas', count: realizadas.length },
+    { key: 'canceladas' as const, label: 'Canceladas', count: canceladas.length },
+  ];
+
+  const groupByDay = (list: any[]) => {
+    const groups: { [day: string]: any[] } = {};
+    for (const e of list) {
+      const day = new Date(e.fecha_hora).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(e);
+    }
+    return groups;
+  };
+
+  const estadoBorder: Record<string, string> = {
+    programada: 'var(--accent)',
+    movida: '#f59e0b',
+    realizada: '#10b981',
+    cancelada: 'var(--error)',
+  };
+
+  const currentList = activeTab === 'proximas' ? proximas : activeTab === 'realizadas' ? realizadas : canceladas;
+  const grupos = groupByDay(currentList);
 
   return (
     <div className="animate-in">
       <div className="flex justify-between items-center mb-6">
         <h1>Agenda de Entrevistas</h1>
+        <button className="btn btn-outline" onClick={cargar} disabled={loading || saving}>
+          <Clock size={16} /> Actualizar
+        </button>
+      </div>
+
+      {/* Tabs de estado */}
+      <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.5rem', background: '#f8fafc', padding: '0.35rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', width: 'fit-content' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.875rem', padding: '0.4rem 1rem' }}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+            {tab.count > 0 && (
+              <span style={{ marginLeft: '0.4rem', background: activeTab === tab.key ? 'rgba(255,255,255,0.25)' : 'var(--accent-soft)', color: activeTab === tab.key ? 'white' : 'var(--accent)', borderRadius: '999px', padding: '0 0.45rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>Cargando agenda...</div>
+      ) : currentList.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+          No hay entrevistas en esta categoría.
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {entrevistas.length > 0 ? entrevistas.map(e => (
-            <div key={e.id} className="card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                <div style={{ background: 'var(--accent-soft)', padding: '0.75rem', borderRadius: 'var(--radius-md)', textAlign: 'center', minWidth: '90px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                    {new Date(e.fecha_hora).toLocaleDateString(undefined, { month: 'short' })}
+        Object.entries(grupos).map(([dia, items]) => (
+          <div key={dia} style={{ marginBottom: '2rem' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.75rem', paddingBottom: '0.4rem', borderBottom: '2px solid var(--border-color)' }}>
+              📅 {dia}
+            </div>
+            {items.map((e: any) => {
+              const isExpanded = expandedReschedule === e.id;
+              const waLink = getWALink(e);
+              return (
+                <div key={e.id} style={{ marginBottom: '0.75rem' }}>
+                  <div className="card" style={{ padding: '1.25rem', borderLeft: `4px solid ${estadoBorder[e.estado] || 'var(--border-color)'}`, opacity: e.estado === 'cancelada' ? 0.65 : 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                        <div style={{ background: 'var(--accent-soft)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', textAlign: 'center', minWidth: '72px' }}>
+                          <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>
+                            {new Date(e.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>hs</div>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>DNI: {e.alumno_dni}</div>
+                          {e.contacto_entrevista_nombre && (
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                              Contacto: {e.contacto_entrevista_nombre} · {e.contacto_entrevista_medio}
+                            </div>
+                          )}
+                          {e.respuesta && (
+                            <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: '#d1fae5', color: '#065f46', borderRadius: 'var(--radius-sm)', fontWeight: 600, display: 'inline-block' }}>
+                              Resp. familia: {e.respuesta}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {waLink && (
+                          <a href={waLink} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ color: '#25D366', padding: '0.5rem 0.75rem' }} title="Enviar WhatsApp">
+                            <MessageCircle size={18} />
+                          </a>
+                        )}
+                        {e.estado !== 'cancelada' && e.estado !== 'realizada' && (
+                          <>
+                            <button
+                              className="btn btn-ghost"
+                              style={{ color: '#10b981', fontSize: '0.8125rem' }}
+                              onClick={() => handleCambiarEstado(e.id, 'realizada')}
+                              disabled={saving}
+                              title="Marcar como realizada"
+                            >
+                              <Save size={16} /> Realizada
+                            </button>
+                            <button
+                              className={`btn ${isExpanded ? 'btn-primary' : 'btn-outline'}`}
+                              style={{ fontSize: '0.8125rem' }}
+                              onClick={() => {
+                                setExpandedReschedule(isExpanded ? null : e.id);
+                                setRescheduleDate(e.fecha_hora?.slice(0, 16) || '');
+                              }}
+                            >
+                              <Calendar size={16} /> Reprogramar
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              style={{ color: 'var(--error)', fontSize: '0.8125rem' }}
+                              onClick={() => handleCambiarEstado(e.id, 'cancelada')}
+                              disabled={saving}
+                            >
+                              <X size={16} /> Cancelar
+                            </button>
+                          </>
+                        )}
+                        <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline" style={{ fontSize: '0.8125rem' }}>
+                          Ver ficha <ChevronRight size={14} />
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)', lineHeight: 1 }}>
-                    {new Date(e.fecha_hora).getDate()}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{new Date(e.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}hs</div>
-                  <div style={{ color: 'var(--primary)', fontWeight: 500 }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>DNI: {e.alumno_dni}</div>
-                  {e.respuesta && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.8125rem', padding: '0.25rem 0.5rem', background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 'var(--radius-sm)', fontWeight: 600, display: 'inline-block' }}>
-                      Respuesta: {e.respuesta}
+                  {/* Panel inline de reprogramación */}
+                  {isExpanded && (
+                    <div className="animate-in" style={{ background: '#eff6ff', border: '1px solid var(--accent)', borderTop: 'none', borderRadius: '0 0 var(--radius-md) var(--radius-md)', padding: '1.25rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.75rem', color: 'var(--accent)' }}>
+                        📅 Nueva fecha y hora para la entrevista
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="datetime-local"
+                          className="form-input"
+                          style={{ maxWidth: '260px' }}
+                          value={rescheduleDate}
+                          min={new Date().toISOString().slice(0, 16)}
+                          onChange={ev => setRescheduleDate(ev.target.value)}
+                        />
+                        <button className="btn btn-primary" onClick={() => handleReprogramar(e.id)} disabled={saving || !rescheduleDate}>
+                          {saving ? 'Guardando...' : 'Confirmar cambio'}
+                        </button>
+                        <button className="btn btn-ghost" onClick={() => { setExpandedReschedule(null); setRescheduleDate(''); }}>
+                          Cancelar
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        ⚠ Se validará que no haya otra entrevista dentro de la franja de 1 hora.
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                 <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline" style={{ fontSize: '0.8125rem' }}>
-                  <Edit2 size={16} /> Ver Ficha / Notas
-                </Link>
-                {/* Botón WhatsApp rápido - Usa el template si hay datos de contacto en la query (o simplemente linkea a la ficha) */}
-                <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-ghost" style={{ color: '#25D366' }}>
-                  <MessageCircle size={20} />
-                </Link>
-              </div>
-            </div>
-          )) : (
-            <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-              No hay entrevistas programadas próximamente.
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        ))
       )}
     </div>
   );
 }
+
 
 const DetalleFicha = ({ token }: { token: string }) => {
   const [data, setData] = useState<any>(null);
@@ -391,6 +562,7 @@ const DetalleFicha = ({ token }: { token: string }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempFicha, setTempFicha] = useState<any>(null);
   const [entrevistas, setEntrevistas] = useState<any[]>([]);
+  const [editingFechas, setEditingFechas] = useState<{[id: number]: string}>({});
   
   const location = useLocation();
   const id = location.pathname.split('/').pop();
@@ -483,10 +655,6 @@ const DetalleFicha = ({ token }: { token: string }) => {
     }
   };
 
-  const handleCancelarEntrevista = async (entrevistaId: number) => {
-    if (!confirm('¿Está seguro de que desea cancelar esta entrevista?')) return;
-    await handleUpdateEntrevista(entrevistaId, { estado: 'cancelada' });
-  };
 
   const handleDeleteFicha = async () => {
     if (!confirm('🚨 ATENCIÓN: ¿Está seguro de que desea eliminar permanentemente esta ficha? Esta acción NO se puede deshacer.')) return;
@@ -1039,63 +1207,104 @@ const DetalleFicha = ({ token }: { token: string }) => {
             </div>
             
             <div>
-              <h4 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Historial</h4>
+              <h4 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Historial de Entrevistas</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {data.entrevistas.length > 0 ? data.entrevistas.map((ev: any, i: number) => (
-                  <div key={i} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)', opacity: ev.estado === 'cancelada' ? 0.6 : 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: ev.estado === 'cancelada' ? 'var(--text-muted)' : 'var(--primary)', marginBottom: '0.25rem' }}>
-                        {new Date(ev.fecha_hora).toLocaleString()} 
-                        {ev.estado === 'cancelada' && <span style={{ color: 'var(--error)', marginLeft: '0.5rem' }}>(CANCELADA)</span>}
+                {data.entrevistas.length > 0 ? data.entrevistas.map((ev: any, i: number) => {
+                  const estadoColor: Record<string, string> = { programada: 'var(--accent)', realizada: '#10b981', cancelada: 'var(--error)', movida: '#f59e0b' };
+                  const editFecha = editingFechas[ev.id] ?? ev.fecha_hora?.slice(0, 16) ?? '';
+                  const fechaCambio = editFecha !== (ev.fecha_hora?.slice(0, 16) ?? '');
+                  return (
+                    <div key={i} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: `1px solid ${estadoColor[ev.estado] || 'var(--border-color)'}`, boxShadow: 'var(--shadow-sm)', opacity: ev.estado === 'cancelada' ? 0.65 : 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: ev.estado === 'cancelada' ? 'var(--text-muted)' : 'var(--primary)', marginBottom: '0.25rem' }}>
+                            {new Date(ev.fecha_hora).toLocaleString('es-AR')}
+                          </div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', padding: '0.15rem 0.5rem', borderRadius: '999px', background: `${estadoColor[ev.estado]}22`, color: estadoColor[ev.estado] || 'var(--text-muted)' }}>
+                            {ev.estado}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          {isWhatsApp && ev.estado !== 'cancelada' && (
+                            <a href={`https://wa.me/${contactData.replace(/\D/g,'')}?text=${getWATemplate(ev)}`} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ padding: '4px', color: '#25D366' }} title="Re-enviar WhatsApp">
+                              <MessageCircle size={16} />
+                            </a>
+                          )}
+                          {ev.estado !== 'cancelada' && (
+                            <select
+                              className="form-select"
+                              style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', width: 'auto' }}
+                              value={ev.estado}
+                              onChange={async (e) => {
+                                if (e.target.value === 'cancelada' && !confirm('¿Cancelar esta entrevista?')) return;
+                                await handleUpdateEntrevista(ev.id, { estado: e.target.value });
+                              }}
+                            >
+                              <option value="programada">Programada</option>
+                              <option value="realizada">Realizada</option>
+                              <option value="cancelada">Cancelada</option>
+                            </select>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                         {ev.estado !== 'cancelada' && (
-                           <button className="btn btn-ghost" style={{ padding: '4px', color: 'var(--error)' }} title="Cancelar" onClick={() => handleCancelarEntrevista(ev.id)}>
-                             <X size={16} />
-                           </button>
-                         )}
-                         <a 
-                           href={`https://wa.me/${contactData.replace(/\D/g,'')}?text=${getWATemplate(ev)}`} 
-                           target="_blank" 
-                           rel="noreferrer" 
-                           className="btn btn-ghost" 
-                           style={{ padding: '4px', color: '#25D366' }}
-                           title="Re-enviar WhatsApp"
-                         >
-                           <MessageCircle size={16} />
-                         </a>
-                      </div>
+
+                      {ev.estado !== 'cancelada' && (
+                        <div style={{ marginTop: '0.75rem' }}>
+                          {/* Editar fecha/hora */}
+                          <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Fecha y Hora</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <input
+                                type="datetime-local"
+                                className="form-input"
+                                style={{ fontSize: '0.8125rem', padding: '0.4rem', flex: 1 }}
+                                value={editFecha}
+                                onChange={(e) => setEditingFechas(prev => ({ ...prev, [ev.id]: e.target.value }))}
+                              />
+                              {fechaCambio && (
+                                <button
+                                  className="btn btn-primary"
+                                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', whiteSpace: 'nowrap' }}
+                                  disabled={savingStatus}
+                                  onClick={async () => {
+                                    await handleUpdateEntrevista(ev.id, { fecha_hora: editFecha });
+                                    setEditingFechas(prev => { const n = { ...prev }; delete n[ev.id]; return n; });
+                                  }}
+                                >
+                                  <Save size={14} /> Guardar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notas Admin</label>
+                            <textarea
+                              className="form-textarea"
+                              style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                              defaultValue={ev.notas}
+                              onBlur={(e) => handleUpdateEntrevista(ev.id, { notas: e.target.value })}
+                              placeholder="Notas de la entrevista..."
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Respuesta de la Familia</label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                              defaultValue={ev.respuesta}
+                              onBlur={(e) => handleUpdateEntrevista(ev.id, { respuesta: e.target.value })}
+                              placeholder="Ej: Confirmaron asistencia, piden cambiar..."
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {ev.estado === 'cancelada' && ev.notas && <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.5rem' }}>Nota: {ev.notas}</div>}
                     </div>
-                    
-                    {ev.estado !== 'cancelada' && (
-                      <div style={{ marginTop: '0.75rem' }}>
-                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notas Admin</label>
-                          <textarea 
-                            className="form-textarea" 
-                            style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
-                            defaultValue={ev.notas}
-                            onBlur={(e) => handleUpdateEntrevista(ev.id, { notas: e.target.value })}
-                            placeholder="Notas de la entrevista..."
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Respuesta de la Familia</label>
-                          <input 
-                            type="text"
-                            className="form-input"
-                            style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
-                            defaultValue={ev.respuesta}
-                            onBlur={(e) => handleUpdateEntrevista(ev.id, { respuesta: e.target.value })}
-                            placeholder="Ej: Confirmaron asistencia, piden cambiar..."
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {ev.estado === 'cancelada' && ev.notas && <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nota: {ev.notas}</div>}
-                  </div>
-                )) : <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)' }}>Aún no hay citas registradas.</div>}
+                  );
+                }) : <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)' }}>Aún no hay citas registradas.</div>}
               </div>
+
             </div>
           </div>
         </div>
