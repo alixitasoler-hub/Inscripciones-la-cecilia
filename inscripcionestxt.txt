@@ -58,6 +58,8 @@ Muchas gracias."
 
 - desde admin poder eliminar una ficha (por ejemplo, en caso de estar repetidas)
 -una vez realizada la entrevista visualizar por defecto aquellas que estén pendientes de ingreso o respuesta y las ya efectuadas que sean filtradas (con opción a verlas, por supuesto). También debería estar indicado, en este ultimo caso, si ingresaron o no (y en este caso, la razón: desistieron, rechazamos, no contestan)
--Al cargar la ficha, si un campo esta equivocado o ya registrado (por ejemplo, ya existe alguien con el mismo DNI), además del mensaje, que se resalte el campo a corregir
+
+-Al llenar la ficha de inscripción, si un campo esta equivocado o ya registrado (por ejemplo, ya existe alguien con el mismo DNI), además del mensaje, que se resalte el campo a corregir
 -el domicilio tanto de alumno como de adultos debe estar desdoblado en dirección, localidad, provincia, país, código postal
+-en la parte de la discapacidad, debe ir primero la pregunta de si presenta alguna , si contesta que si pedir especificar cuál y recién ahí preguntar si tiene CUD (sino, no tiene sentido que exista esa pregunta)
 

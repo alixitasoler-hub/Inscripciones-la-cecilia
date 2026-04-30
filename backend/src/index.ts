@@ -73,9 +73,9 @@ export default {
         if (padres?.length) {
           for (const p of padres) {
             batch.push(cleanBind(env.DB.prepare(`
-              INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, domicilio_datos, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            `), fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.domicilio_datos, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
+              INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            `), fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
           }
         }
         if (hermanos?.length) {
@@ -130,7 +130,12 @@ export default {
           return jsonResponse({ success: true });
         }
         if (path === '/api/admin/fichas' && request.method === 'GET') {
-          const { results } = await env.DB.prepare('SELECT * FROM fichas ORDER BY fecha_solicitud DESC').all();
+          const { results } = await env.DB.prepare(`
+            SELECT f.*, 
+              (SELECT MIN(fecha_hora) FROM entrevistas WHERE ficha_id = f.id AND estado != 'cancelada' AND fecha_hora >= CURRENT_TIMESTAMP) as proxima_entrevista
+            FROM fichas f 
+            ORDER BY f.fecha_solicitud DESC
+          `).all();
           return jsonResponse(results);
         }
         if (path.startsWith('/api/admin/fichas/') && request.method === 'GET') {
@@ -180,21 +185,67 @@ export default {
 
         if (path.startsWith('/api/admin/fichas/') && request.method === 'PATCH') {
           const id = path.split('/').pop();
-          const updates = await request.json() as any;
+          const body = await request.json() as any;
           
-          const keys = Object.keys(updates).filter(k => k !== 'id');
-          if (keys.length === 0) return jsonResponse({ success: true });
+          const batch: any[] = [];
 
-          // Si es una actualización masiva (no solo estado/decisión), marcar como editado por admin
-          const isFullEdit = keys.some(k => !['estado', 'decision_final', 'observaciones_generales'].includes(k));
-          if (isFullEdit) updates.modificado_admin = 1;
+          // Caso 1: Actualización simple (solo campos de ficha)
+          if (!body.ficha && !body.escolaridad) {
+            const keys = Object.keys(body).filter(k => k !== 'id');
+            if (keys.length > 0) {
+              const isFullEdit = keys.some(k => !['estado', 'decision_final', 'observaciones_generales'].includes(k));
+              if (isFullEdit) body.modificado_admin = 1;
 
-          const setClause = keys.map(k => `${k} = ?`).join(', ');
-          const values = keys.map(k => updates[k]);
-          
-          await env.DB.prepare(`UPDATE fichas SET ${setClause} WHERE id = ?`)
-            .bind(...values, id).run();
+              const setClause = keys.map(k => `${k} = ?`).join(', ');
+              const values = keys.map(k => body[k]);
+              batch.push(env.DB.prepare(`UPDATE fichas SET ${setClause} WHERE id = ?`).bind(...values, id));
+            }
+          } 
+          // Caso 2: Actualización completa (objeto anidado)
+          else {
+            const { ficha, escolaridad, padres, hermanos, convivientes } = body;
             
+            if (ficha) {
+              const keys = Object.keys(ficha).filter(k => k !== 'id' && k !== 'id_str');
+              const setClause = keys.map(k => `${k} = ?`).join(', ');
+              const values = keys.map(k => ficha[k]);
+              batch.push(env.DB.prepare(`UPDATE fichas SET ${setClause}, modificado_admin = 1 WHERE id = ?`).bind(...values, id));
+            }
+
+            if (escolaridad) {
+              batch.push(env.DB.prepare('DELETE FROM escolaridad WHERE ficha_id = ?').bind(id));
+              escolaridad.forEach((e: any) => {
+                batch.push(env.DB.prepare('INSERT INTO escolaridad (ficha_id, nivel, anio_cursado, escuela, observaciones) VALUES (?,?,?,?,?)')
+                  .bind(id, e.nivel, e.anio_cursado, e.escuela, e.observaciones));
+              });
+            }
+
+            if (padres) {
+              batch.push(env.DB.prepare('DELETE FROM padres_tutores WHERE ficha_id = ?').bind(id));
+              padres.forEach((p: any) => {
+                batch.push(env.DB.prepare('INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                  .bind(id, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
+              });
+            }
+
+            if (hermanos) {
+              batch.push(env.DB.prepare('DELETE FROM hermanos WHERE ficha_id = ?').bind(id));
+              hermanos.forEach((h: any) => {
+                batch.push(env.DB.prepare('INSERT INTO hermanos (ficha_id, vinculo, nombre_apellido, dni_nro, fecha_nac, estado_civil, estudios_escuela, domicilio_ocupacion, ocupacion) VALUES (?,?,?,?,?,?,?,?,?)')
+                  .bind(id, h.vinculo, h.nombre_apellido, h.dni_nro, h.fecha_nac, h.estado_civil, h.estudios_escuela, h.domicilio_ocupacion, h.ocupacion));
+              });
+            }
+
+            if (convivientes) {
+              batch.push(env.DB.prepare('DELETE FROM convivientes WHERE ficha_id = ?').bind(id));
+              convivientes.forEach((c: any) => {
+                batch.push(env.DB.prepare('INSERT INTO convivientes (ficha_id, nombre_apellido, vinculo, edad, observaciones) VALUES (?,?,?,?,?)')
+                  .bind(id, c.nombre_apellido, c.vinculo, c.edad, c.observaciones));
+              });
+            }
+          }
+
+          if (batch.length > 0) await env.DB.batch(batch);
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/fichas/') && request.method === 'DELETE') {
@@ -203,7 +254,9 @@ export default {
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'PUT') {
-          const id = path.split('/').pop();
+          const id = path.split('/').filter(Boolean).pop();
+          if (!id || isNaN(Number(id))) return jsonResponse({ error: 'ID inválido' }, 400);
+
           const { fecha_hora, notas, estado, respuesta } = await request.json() as any;
           
           if (fecha_hora) {
@@ -218,13 +271,20 @@ export default {
             }
           }
 
-          await env.DB.prepare('UPDATE entrevistas SET fecha_hora = COALESCE(?, fecha_hora), notas = COALESCE(?, notas), estado = COALESCE(?, estado), respuesta = COALESCE(?, respuesta) WHERE id = ?')
-            .bind(fecha_hora, notas, estado, respuesta, id).run();
+          // Usar NULL para que COALESCE mantenga el valor actual si no se envía el nuevo
+          const val = (v: any) => v === undefined ? null : v;
+          const res = await env.DB.prepare('UPDATE entrevistas SET fecha_hora = COALESCE(?, fecha_hora), notas = COALESCE(?, notas), estado = COALESCE(?, estado), respuesta = COALESCE(?, respuesta) WHERE id = ?')
+            .bind(val(fecha_hora), val(notas), val(estado), val(respuesta), id).run();
+          
+          if (res.meta.changes === 0) return jsonResponse({ error: 'Entrevista no encontrada' }, 404);
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'DELETE') {
-          const id = path.split('/').pop();
-          await env.DB.prepare('DELETE FROM entrevistas WHERE id = ?').bind(id).run();
+          const id = path.split('/').filter(Boolean).pop();
+          if (!id || isNaN(Number(id))) return jsonResponse({ error: 'ID inválido' }, 400);
+
+          const res = await env.DB.prepare('DELETE FROM entrevistas WHERE id = ?').bind(id).run();
+          if (res.meta.changes === 0) return jsonResponse({ error: 'Entrevista no encontrada' }, 404);
           return jsonResponse({ success: true });
         }
       }
@@ -234,7 +294,7 @@ export default {
     } catch (e: any) {
       console.error('Error en API:', e.message, e.stack);
       if (e.message.includes('UNIQUE constraint failed: fichas.dni_nro')) {
-        return jsonResponse({ error: 'El DNI ingresado ya se encuentra registrado en el sistema.' }, 400);
+        return jsonResponse({ error: 'El DNI ingresado ya se encuentra registrado en el sistema.', field: 'dni_nro' }, 400);
       }
       return jsonResponse({ error: `Error interno: ${e.message}` }, 500);
     }

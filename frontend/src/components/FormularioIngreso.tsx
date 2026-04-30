@@ -86,7 +86,7 @@ const FormularioIngreso = () => {
       { nivel: '5° año', anio_cursado: '', escuela: '', observaciones: '' }
     ],
     padres: [
-      { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', domicilio_datos: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false }
+      { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false }
     ],
     hermanos: [] as Array<{vinculo: string, vinculo_otro: string, nombre_apellido: string, dni_nro: string, fecha_nac: string, estado_civil: string, estudios_escuela: string, domicilio_ocupacion: string, ocupacion: string}>,
     convivientes: [] as Array<{nombre_apellido: string, vinculo: string, edad: string, observaciones: string}>
@@ -153,11 +153,11 @@ const FormularioIngreso = () => {
 
   const nextStep = () => {
     if (currentStep === 1) {
-      const required = ['apellido', 'nombre', 'dni_nro', 'nivel_ingreso', 'grado_anio'];
+      const required = ['apellido', 'nombre', 'dni_tipo', 'dni_nro', 'sexo', 'fecha_nac', 'direccion', 'localidad', 'provincia', 'pais', 'cp', 'nivel_ingreso', 'grado_anio'];
       const missing = required.filter(f => !(data.ficha as any)[f]);
       if (missing.length > 0) {
         setFieldErrors(missing);
-        alert('Por favor complete los campos obligatorios (*) marcados en rojo.');
+        alert('Por favor complete todos los datos personales del alumno (*).');
         return;
       }
       if (!data.ficha.ciclo_lectivo) {
@@ -171,16 +171,22 @@ const FormularioIngreso = () => {
       let atLeastOneComplete = false;
 
       data.padres.forEach((p, idx) => {
-        const hasSomeData = p.apellido || p.nombre || p.dni_nro || p.domicilio_datos || p.celular;
+        const hasSomeData = p.apellido || p.nombre || p.dni_nro || p.direccion || p.celular;
         if (hasSomeData) {
             if (!p.apellido) errors.push(`p${idx}_apellido`);
             if (!p.nombre) errors.push(`p${idx}_nombre`);
             if (!p.rol) errors.push(`p${idx}_rol`);
             if (!p.dni_nro) errors.push(`p${idx}_dni_nro`);
-            if (!p.domicilio_datos) errors.push(`p${idx}_domicilio_datos`);
-            if (!p.celular && !p.telefono_casa) errors.push(`p${idx}_celular`);
+            if (!p.direccion) errors.push(`p${idx}_direccion`);
+            if (!p.localidad) errors.push(`p${idx}_localidad`);
+            if (!p.provincia) errors.push(`p${idx}_provincia`);
+            if (!p.pais) errors.push(`p${idx}_pais`);
+            if (!p.cp) errors.push(`p${idx}_cp`);
+            if (!p.celular) errors.push(`p${idx}_celular`);
+            if (!p.email) errors.push(`p${idx}_email`);
+            if (!p.profesion_ocupacion) errors.push(`p${idx}_profesion_ocupacion`);
             
-            if (p.apellido && p.nombre && p.rol && p.dni_nro && p.domicilio_datos && (p.celular || p.telefono_casa)) {
+            if (p.apellido && p.nombre && p.rol && p.dni_nro && p.direccion && p.localidad && p.celular && p.email && p.profesion_ocupacion) {
                 atLeastOneComplete = true;
             }
         }
@@ -200,6 +206,14 @@ const FormularioIngreso = () => {
 
       if (errors.length > 0) {
         setFieldErrors(errors);
+        return;
+      }
+    }
+    
+    if (currentStep === 5) {
+      if (!data.ficha.situacion_socioeconomica) {
+        setFieldErrors(['situacion_socioeconomica']);
+        alert('Debe completar la situación socioeconómica.');
         return;
       }
     }
@@ -239,10 +253,16 @@ const FormularioIngreso = () => {
       });
       const result = await res.json();
       
-      if (!res.ok) throw new Error(result.error || 'Error al enviar la ficha.');
+      if (!res.ok) {
+        if (result.field) {
+            setFieldErrors([result.field]);
+            if (result.field === 'dni_nro') setCurrentStep(1);
+        }
+        throw new Error(result.error || 'Error al enviar la ficha.');
+      }
       setSuccess(true);
     } catch (err: any) {
-      setError(`Error: ${err.message}`);
+      setError(`${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -358,33 +378,36 @@ const FormularioIngreso = () => {
               <div className="form-group"><label className="form-label">Apellido(s) *</label><input className={getFieldClass('apellido')} name="apellido" value={data.ficha.apellido} onChange={handleFichaChange} placeholder="Escriba los apellidos..." /></div>
               <div className="form-group"><label className="form-label">Nombre(s) *</label><input className={getFieldClass('nombre')} name="nombre" value={data.ficha.nombre} onChange={handleFichaChange} placeholder="Escriba los nombres..." /></div>
               <div className="form-group">
-                <label className="form-label">Tipo Documento</label>
-                <select className="form-select" name="dni_tipo" value={data.ficha.dni_tipo} onChange={handleFichaChange}>
+                <label className="form-label">Tipo Documento *</label>
+                <select className={getSelectClass('dni_tipo')} name="dni_tipo" value={data.ficha.dni_tipo} onChange={handleFichaChange}>
+                  <option value="">Seleccionar...</option>
                   <option value="DNI">DNI</option><option value="Pasaporte">Pasaporte</option><option value="Cédula">Cédula</option>
                 </select>
               </div>
               <div className="form-group"><label className="form-label">Número Documento *</label><input className={getFieldClass('dni_nro')} name="dni_nro" placeholder="Sin puntos ni espacios (Ej: 40123456)" value={data.ficha.dni_nro} onChange={handleFichaChange} /></div>
               
               <div className="form-group">
-                <label className="form-label">Sexo</label>
-                <select className="form-select" name="sexo" value={data.ficha.sexo} onChange={handleFichaChange}>
+                <label className="form-label">Sexo *</label>
+                <select className={getSelectClass('sexo')} name="sexo" value={data.ficha.sexo} onChange={handleFichaChange}>
                   <option value="">Seleccionar...</option>
                   <option value="Femenino">Femenino</option>
                   <option value="Masculino">Masculino</option>
                   <option value="No binario">No binario</option>
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Fecha Nacimiento</label><input type="date" className="form-input" name="fecha_nac" value={data.ficha.fecha_nac} onChange={handleFichaChange} /></div>
-              <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura)</label><input className="form-input" name="direccion" value={data.ficha.direccion} onChange={handleFichaChange} placeholder="Ej: Av. San Martín 1234" /></div>
+              <div className="form-group"><label className="form-label">Fecha Nacimiento *</label><input type="date" className={getFieldClass('fecha_nac')} name="fecha_nac" value={data.ficha.fecha_nac} onChange={handleFichaChange} /></div>
+              <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion')} name="direccion" value={data.ficha.direccion} onChange={handleFichaChange} placeholder="Ej: Av. San Martín 1234" /></div>
               
               <div className="form-group">
-                <label className="form-label">Localidad/Ciudad</label>
-                <input className="form-input" list="localidades-list" name="localidad" value={data.ficha.localidad} onChange={handleFichaChange} placeholder="Buscar o escribir localidad..." />
+                <label className="form-label">Localidad/Ciudad *</label>
+                <input className={getFieldClass('localidad')} list="localidades-list" name="localidad" value={data.ficha.localidad} onChange={handleFichaChange} placeholder="Buscar o escribir localidad..." />
                 <datalist id="localidades-list">
                   {Object.keys(LOCALIDADES_MAP).map(l => <option key={l} value={l} />)}
                 </datalist>
               </div>
-              <div className="form-group"><label className="form-label">Provincia</label><input className="form-input" name="provincia" value={data.ficha.provincia} onChange={handleFichaChange} /></div>
+              <div className="form-group"><label className="form-label">Provincia *</label><input className={getFieldClass('provincia')} name="provincia" value={data.ficha.provincia} onChange={handleFichaChange} /></div>
+              <div className="form-group"><label className="form-label">País *</label><input className={getFieldClass('pais')} name="pais" value={data.ficha.pais} onChange={handleFichaChange} /></div>
+              <div className="form-group"><label className="form-label">Código Postal *</label><input className={getFieldClass('cp')} name="cp" value={data.ficha.cp} onChange={handleFichaChange} /></div>
               
               <div className="form-group">
                 <label className="form-label">Nivel a Inscribirse *</label>
@@ -512,17 +535,7 @@ const FormularioIngreso = () => {
               <label className="form-label">Información Médica Relevante</label>
               <textarea className="form-textarea" name="salud_detalles" placeholder="Indique alergias, enfermedades crónicas, medicamentos o atenciones especiales..." value={data.ficha.salud_detalles} onChange={handleFichaChange} rows={4} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="form-group"><label className="form-label">Obra Social / Prepaga</label><input className="form-input" name="obra_social" value={data.ficha.obra_social} onChange={handleFichaChange} placeholder="Nombre de la cobertura..." /></div>
-              <div className="form-group">
-                 <label className="form-label">¿Posee CUD (Discapacidad)?</label>
-                 <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
-                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
-                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={!data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
-                 </div>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginTop: '1rem' }}>
               <div className="form-group">
                  <label className="form-label">¿Posee el alumno/a alguna discapacidad?</label>
                  <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
@@ -531,10 +544,19 @@ const FormularioIngreso = () => {
                  </div>
               </div>
               {data.ficha.posee_discapacidad && (
-                <div className="form-group animate-in">
-                  <label className="form-label">Especifique cuál/es *</label>
-                  <input className={getFieldClass('discapacidad')} name="discapacidad" placeholder="Detalle la discapacidad..." value={data.ficha.discapacidad} onChange={handleFichaChange} />
-                </div>
+                <>
+                  <div className="form-group animate-in">
+                    <label className="form-label">Especifique cuál/es *</label>
+                    <input className={getFieldClass('discapacidad')} name="discapacidad" placeholder="Detalle la discapacidad..." value={data.ficha.discapacidad} onChange={handleFichaChange} />
+                  </div>
+                  <div className="form-group animate-in">
+                    <label className="form-label">¿Posee CUD (Certificado Único de Discapacidad)?</label>
+                    <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
+                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
+                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={!data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
             <div className="form-group" style={{ marginTop: '1rem' }}>
@@ -553,7 +575,7 @@ const FormularioIngreso = () => {
           <section className="animate-in">
             <div className="flex justify-between items-center mb-6">
               <h3 className="section-title" style={{marginBottom:0}}>Responsables / Tutores</h3>
-              <button className="btn btn-outline btn-sm" onClick={() => addToArray('padres', { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', domicilio_datos: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false })}>
+              <button className="btn btn-outline btn-sm" onClick={() => addToArray('padres', { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false })}>
                 <Plus size={16} /> Agregar Responsable
               </button>
             </div>
@@ -587,8 +609,13 @@ const FormularioIngreso = () => {
                    <div className="form-group"><label className="form-label">Nombres *</label><input className={getFieldClass('nombre', idx)} value={p.nombre} onChange={v => updateArray('padres', idx, 'nombre', v.target.value)} /></div>
                    <div className="form-group"><label className="form-label">DNI *</label><input className={getFieldClass('dni_nro', idx)} placeholder="Sin puntos" value={p.dni_nro} onChange={v => updateArray('padres', idx, 'dni_nro', v.target.value)} /></div>
                    <div className="form-group"><label className="form-label">Celular / Teléfono *</label><input className={getFieldClass('celular', idx)} placeholder="Ej: 342 1234567" value={p.celular} onChange={v => updateArray('padres', idx, 'celular', v.target.value)} /></div>
-                   <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Domicilio Completo *</label><input className={getFieldClass('domicilio_datos', idx)} placeholder="Calle, Nro, Piso, Localidad..." value={p.domicilio_datos} onChange={v => updateArray('padres', idx, 'domicilio_datos', v.target.value)} /></div>
-                   <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Email</label><input className="form-input" type="email" placeholder="ejemplo@correo.com" value={p.email} onChange={v => updateArray('padres', idx, 'email', v.target.value)} /></div>
+                   <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion', idx)} placeholder="Ej: Av. San Martín 1234" value={p.direccion} onChange={v => updateArray('padres', idx, 'direccion', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Localidad/Ciudad *</label><input className={getFieldClass('localidad', idx)} placeholder="Ciudad" value={p.localidad} onChange={v => updateArray('padres', idx, 'localidad', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Provincia *</label><input className={getFieldClass('provincia', idx)} value={p.provincia} onChange={v => updateArray('padres', idx, 'provincia', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">País *</label><input className={getFieldClass('pais', idx)} value={p.pais} onChange={v => updateArray('padres', idx, 'pais', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Código Postal *</label><input className={getFieldClass('cp', idx)} value={p.cp} onChange={v => updateArray('padres', idx, 'cp', v.target.value)} /></div>
+                    <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Email *</label><input className={getFieldClass('email', idx)} type="email" placeholder="ejemplo@correo.com" value={p.email} onChange={v => updateArray('padres', idx, 'email', v.target.value)} /></div>
+                    <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Profesión / Ocupación *</label><input className={getFieldClass('profesion_ocupacion', idx)} placeholder="Ej: Comerciante, Docente, etc." value={p.profesion_ocupacion} onChange={v => updateArray('padres', idx, 'profesion_ocupacion', v.target.value)} /></div>
                 </div>
               </div>
             ))}
@@ -689,7 +716,7 @@ const FormularioIngreso = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <div className="form-group">
-                    <label className="form-label" style={{fontSize: '1rem'}}>Situación Socioeconómica</label>
+                    <label className="form-label" style={{fontSize: '1rem'}}>Situación Socioeconómica *</label>
                     <select className={getSelectClass('situacion_socioeconomica')} name="situacion_socioeconomica" value={data.ficha.situacion_socioeconomica} onChange={handleFichaChange}>
                         <option value="">Seleccionar...</option>
                         <option value="Muy buena">Muy buena</option>

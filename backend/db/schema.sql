@@ -83,7 +83,11 @@ CREATE TABLE padres_tutores (
   estado_civil TEXT,
   fecha_nac TEXT,
   lugar_nac_datos TEXT, -- Localidad, Provincia, Pais
-  domicilio_datos TEXT, -- Direccion, Localidad, CP, etc.
+  direccion TEXT,
+  localidad TEXT,
+  provincia TEXT,
+  pais TEXT,
+  cp TEXT,
   telefono_casa TEXT,
   celular TEXT,
   whatsapp_contacto INTEGER DEFAULT 0, -- 1 si este es el nro para contacto
