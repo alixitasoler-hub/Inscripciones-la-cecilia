@@ -14,9 +14,7 @@ function App() {
             <span className="logo-text">La Cecilia</span>
           </Link>
           <nav>
-            <Link to="/admin" className="btn btn-outline" style={{ fontSize: '0.8125rem', padding: '0.5rem 1rem' }}>
-              Acceso Admin
-            </Link>
+            {/* El link de admin ahora es privado y no aparece en la página pública */}
           </nav>
         </div>
       </header>

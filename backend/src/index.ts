@@ -20,6 +20,34 @@ const jsonResponse = (data: any, status = 200) => {
   });
 };
 
+const getUserIdFromAuth = async (request: Request, env: Env) => {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.split(' ')[1];
+  
+  // Para compatibilidad con el password de admin anterior
+  if (token === env.ADMIN_PASSWORD) {
+    return { id: 1, usuario: 'admin', rol: 'superadmin' };
+  }
+
+  try {
+    const [id, usuario, expires] = atob(token).split(':');
+    if (parseInt(expires) < Date.now()) return null;
+    return { id: parseInt(id), usuario, expires: parseInt(expires) };
+  } catch {
+    return null;
+  }
+};
+
+const logAction = async (env: Env, userId: number, fichaId: number | null, action: string, details: any) => {
+  try {
+    await env.DB.prepare('INSERT INTO historial_cambios (usuario_id, ficha_id, accion, detalles) VALUES (?, ?, ?, ?)')
+      .bind(userId, fichaId, action, JSON.stringify(details)).run();
+  } catch (e) {
+    console.error('Error logging action:', e);
+  }
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -119,16 +147,25 @@ export default {
         return jsonResponse({ success: true, id: fichaId }, 201);
       }
 
-      // --- ADMIN (Simulado con auth básico en header) ---
-      const authHeader = request.headers.get('Authorization');
-      const isAuthorized = authHeader === `Bearer ${env.ADMIN_PASSWORD}`;
-
+      // --- ADMIN (Auth basado en usuarios) ---
       if (path.startsWith('/api/admin/')) {
-        if (!isAuthorized) return jsonResponse({ error: 'No autorizado' }, 401);
-
         if (path === '/api/admin/login' && request.method === 'POST') {
-          return jsonResponse({ success: true });
+          const { usuario, password } = await request.json() as any;
+          const user = await env.DB.prepare('SELECT * FROM usuarios WHERE usuario = ? AND password = ?')
+            .bind(usuario, password).first() as any;
+          
+          if (!user) return jsonResponse({ error: 'Credenciales inválidas' }, 401);
+          if (user.activo === 0) return jsonResponse({ error: 'Usuario inactivo' }, 403);
+          
+          // Generar un token simple (Base64 de id:usuario:expiry)
+          const expiry = Date.now() + (24 * 60 * 60 * 1000); // 24hs
+          const token = btoa(`${user.id}:${user.usuario}:${expiry}`);
+          
+          return jsonResponse({ success: true, token, user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol } });
         }
+
+        const currentUser = await getUserIdFromAuth(request, env);
+        if (!currentUser) return jsonResponse({ error: 'No autorizado' }, 401);
         if (path === '/api/admin/fichas' && request.method === 'GET') {
           const { results } = await env.DB.prepare(`
             SELECT f.*, 
@@ -245,13 +282,48 @@ export default {
             }
           }
 
+
+
           if (batch.length > 0) await env.DB.batch(batch);
+          
+          await logAction(env, currentUser.id, parseInt(id!), 'edición', { 
+            campos: Object.keys(body.ficha || body).filter(k => k !== 'id')
+          });
+
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/fichas/') && request.method === 'DELETE') {
           const id = path.split('/').pop();
           await env.DB.prepare('DELETE FROM fichas WHERE id = ?').bind(id).run();
+          
+          await logAction(env, currentUser.id, parseInt(id!), 'borrado', { id });
+          
           return jsonResponse({ success: true });
+        }
+        
+        if (path === '/api/admin/metrics' && request.method === 'GET') {
+          const from = url.searchParams.get('from') || '2000-01-01';
+          const to = url.searchParams.get('to') || '2100-01-01';
+
+          const stats = await env.DB.prepare(`
+            SELECT 
+              nivel_ingreso,
+              COUNT(*) as total,
+              SUM(CASE WHEN decision_final = 'ingresa' THEN 1 ELSE 0 END) as concretados
+            FROM fichas 
+            WHERE fecha_solicitud >= ? AND fecha_solicitud <= ?
+            GROUP BY nivel_ingreso
+          `).bind(from, to).all();
+
+          const history = await env.DB.prepare(`
+            SELECT h.*, u.nombre as usuario_nombre, f.apellido || ', ' || f.nombre as ficha_nombre
+            FROM historial_cambios h
+            JOIN usuarios u ON h.usuario_id = u.id
+            LEFT JOIN fichas f ON h.ficha_id = f.id
+            ORDER BY h.fecha DESC LIMIT 100
+          `).all();
+
+          return jsonResponse({ stats: stats.results, history: history.results });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'PUT') {
           const id = path.split('/').filter(Boolean).pop();
@@ -277,6 +349,50 @@ export default {
             .bind(val(fecha_hora), val(notas), val(estado), val(respuesta), id).run();
           
           if (res.meta.changes === 0) return jsonResponse({ error: 'Entrevista no encontrada' }, 404);
+          return jsonResponse({ success: true });
+        }
+
+        // --- GESTIÓN DE USUARIOS ---
+        if (path === '/api/admin/usuarios' && request.method === 'GET') {
+          const { results } = await env.DB.prepare('SELECT id, usuario, nombre, rol, activo FROM usuarios').all();
+          return jsonResponse(results);
+        }
+        if (path === '/api/admin/usuarios' && request.method === 'POST') {
+          const { usuario, password, nombre, rol } = await request.json() as any;
+          if (!usuario || !password) return jsonResponse({ error: 'Usuario y contraseña requeridos' }, 400);
+          
+          await env.DB.prepare('INSERT INTO usuarios (usuario, password, nombre, rol, activo) VALUES (?, ?, ?, ?, 1)')
+            .bind(usuario, password, nombre || usuario, rol || 'admin').run();
+          
+          await logAction(env, currentUser.id, null, 'creación_usuario', { usuario });
+          return jsonResponse({ success: true });
+        }
+        if (path.startsWith('/api/admin/usuarios/') && request.method === 'PUT') {
+          const id = path.split('/').pop();
+          const { usuario, password, nombre, rol, activo } = await request.json() as any;
+          
+          const keys = [];
+          const values = [];
+          if (usuario !== undefined) { keys.push('usuario = ?'); values.push(usuario); }
+          if (password !== undefined) { keys.push('password = ?'); values.push(password); }
+          if (nombre !== undefined) { keys.push('nombre = ?'); values.push(nombre); }
+          if (rol !== undefined) { keys.push('rol = ?'); values.push(rol); }
+          if (activo !== undefined) { keys.push('activo = ?'); values.push(activo ? 1 : 0); }
+          
+          if (keys.length === 0) return jsonResponse({ error: 'Nada que actualizar' }, 400);
+          
+          await env.DB.prepare(`UPDATE usuarios SET ${keys.join(', ')} WHERE id = ?`)
+            .bind(...values, id).run();
+            
+          await logAction(env, currentUser.id, null, 'edición_usuario', { id, campos: keys });
+          return jsonResponse({ success: true });
+        }
+        if (path.startsWith('/api/admin/usuarios/') && request.method === 'DELETE') {
+          const id = path.split('/').pop();
+          if (parseInt(id!) === currentUser.id) return jsonResponse({ error: 'No puedes borrarte a ti mismo' }, 400);
+          
+          await env.DB.prepare('DELETE FROM usuarios WHERE id = ?').bind(id).run();
+          await logAction(env, currentUser.id, null, 'borrado_usuario', { id });
           return jsonResponse({ success: true });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'DELETE') {

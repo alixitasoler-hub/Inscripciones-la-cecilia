@@ -31,8 +31,8 @@ const LOCALIDADES_MAP: Record<string, any> = {
   'Santa Fe': { provincia: 'Santa Fe', pais: 'Argentina', cp: '3000' },
   'Recreo': { provincia: 'Santa Fe', pais: 'Argentina', cp: '3018' },
   'Monte Vera': { provincia: 'Santa Fe', pais: 'Argentina', cp: '3014' },
-  'Esperanza de Santa Fe': { provincia: 'Santa Fe', pais: 'Argentina', cp: '3080' },
-  'Paraná de Entre Ríos': { provincia: 'Entre Ríos', pais: 'Argentina', cp: '3100' }
+  'Esperanza': { provincia: 'Santa Fe', pais: 'Argentina', cp: '3080' },
+  'Paraná': { provincia: 'Entre Ríos', pais: 'Argentina', cp: '3100' }
 };
 
 const GRADOS_POR_NIVEL: Record<string, string[]> = {
@@ -98,10 +98,29 @@ const FormularioIngreso = () => {
     }).catch(() => {});
   }, []);
 
+  const applyDateMask = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    let formatted = '';
+    if (digits.length > 0) {
+      formatted = digits.substring(0, 2);
+      if (digits.length > 2) {
+        formatted += '/' + digits.substring(2, 4);
+        if (digits.length > 4) {
+          formatted += '/' + digits.substring(4, 8);
+        }
+      }
+    }
+    return formatted;
+  };
+
   const handleFichaChange = (e: any) => {
     const { name, value, type, checked } = e.target;
     let newValue = type === 'checkbox' ? checked : value;
     
+    if (name === 'fecha_nac') {
+      newValue = applyDateMask(value);
+    }
+
     let newData = { ...data.ficha, [name]: newValue };
     
     // Si cambia el nivel, reseteamos el grado
@@ -131,11 +150,28 @@ const FormularioIngreso = () => {
   };
 
   const updateArray = (key: string, index: number, field: string, value: any) => {
+    let newValue = value;
+    if (field === 'fecha_nac') {
+      newValue = applyDateMask(value);
+    }
+
     const newList = [...(data as any)[key]];
-    newList[index] = { ...newList[index], [field]: value };
+    newList[index] = { ...newList[index], [field]: newValue };
+
+    // Lógica de autocompletado para adultos (padres)
+    if (key === 'padres' && field === 'localidad' && LOCALIDADES_MAP[newValue]) {
+      const ubi = LOCALIDADES_MAP[newValue];
+      newList[index] = { 
+        ...newList[index], 
+        provincia: ubi.provincia, 
+        pais: ubi.pais, 
+        cp: ubi.cp 
+      };
+    }
+
     setData({ ...data, [key]: newList });
     
-    const errorKey = `p${index}_${field}`;
+    const errorKey = (key === 'padres' ? 'p' : (key === 'hermanos' ? 'h' : 'u')) + index + '_' + field;
     if (fieldErrors.includes(errorKey)) {
         setFieldErrors(prev => prev.filter(f => f !== errorKey));
     }
@@ -239,12 +275,14 @@ const FormularioIngreso = () => {
     try {
       const payload = {
         ...data,
-        escolaridad: data.escolaridad.filter(e => e.escuela.trim() !== '' || e.anio_cursado.trim() !== ''),
+        escolaridad: data.escolaridad.filter(e => (e.escuela?.trim() || '') !== '' || (e.anio_cursado?.trim() || '') !== ''),
         padres: data.padres.map(p => ({
             ...p,
             rol: p.rol === 'Otro' ? p.rol_otro : p.rol
         }))
       };
+
+      console.log('Enviando ficha:', payload);
 
       const res = await fetch(`${API_URL}/fichas`, {
         method: 'POST',
@@ -262,7 +300,8 @@ const FormularioIngreso = () => {
       }
       setSuccess(true);
     } catch (err: any) {
-      setError(`${err.message}`);
+      console.error('Error en el envío:', err);
+      setError(`Error: ${err.message}. Verifique su conexión.`);
     } finally {
       setLoading(false);
     }
@@ -363,6 +402,10 @@ const FormularioIngreso = () => {
           </div>
 
           <div style={{ marginTop: '1.5rem' }}>
+            {/* Datalist global para todas las localidades */}
+            <datalist id="localidades-list">
+              {Object.keys(LOCALIDADES_MAP).map(l => <option key={l} value={l} />)}
+            </datalist>
         {error && (
           <div className="animate-in" style={{ marginBottom: '1.5rem', background: '#FEF2F2', border: '1px solid #FEE2E2', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: '#991B1B', display: 'flex', gap: '1rem', alignItems: 'center', fontWeight: 500 }}>
             <AlertCircle size={24} /> {error}
@@ -395,15 +438,12 @@ const FormularioIngreso = () => {
                   <option value="No binario">No binario</option>
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Fecha Nacimiento *</label><input type="date" className={getFieldClass('fecha_nac')} name="fecha_nac" value={data.ficha.fecha_nac} onChange={handleFichaChange} /></div>
+              <div className="form-group"><label className="form-label">Fecha Nacimiento *</label><input type="text" className={getFieldClass('fecha_nac')} name="fecha_nac" placeholder="dd/mm/aaaa" value={data.ficha.fecha_nac} onChange={handleFichaChange} /></div>
               <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion')} name="direccion" value={data.ficha.direccion} onChange={handleFichaChange} placeholder="Ej: Av. San Martín 1234" /></div>
               
               <div className="form-group">
                 <label className="form-label">Localidad/Ciudad *</label>
                 <input className={getFieldClass('localidad')} list="localidades-list" name="localidad" value={data.ficha.localidad} onChange={handleFichaChange} placeholder="Buscar o escribir localidad..." />
-                <datalist id="localidades-list">
-                  {Object.keys(LOCALIDADES_MAP).map(l => <option key={l} value={l} />)}
-                </datalist>
               </div>
               <div className="form-group"><label className="form-label">Provincia *</label><input className={getFieldClass('provincia')} name="provincia" value={data.ficha.provincia} onChange={handleFichaChange} /></div>
               <div className="form-group"><label className="form-label">País *</label><input className={getFieldClass('pais')} name="pais" value={data.ficha.pais} onChange={handleFichaChange} /></div>
@@ -610,7 +650,7 @@ const FormularioIngreso = () => {
                    <div className="form-group"><label className="form-label">DNI *</label><input className={getFieldClass('dni_nro', idx)} placeholder="Sin puntos" value={p.dni_nro} onChange={v => updateArray('padres', idx, 'dni_nro', v.target.value)} /></div>
                    <div className="form-group"><label className="form-label">Celular / Teléfono *</label><input className={getFieldClass('celular', idx)} placeholder="Ej: 342 1234567" value={p.celular} onChange={v => updateArray('padres', idx, 'celular', v.target.value)} /></div>
                    <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion', idx)} placeholder="Ej: Av. San Martín 1234" value={p.direccion} onChange={v => updateArray('padres', idx, 'direccion', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Localidad/Ciudad *</label><input className={getFieldClass('localidad', idx)} placeholder="Ciudad" value={p.localidad} onChange={v => updateArray('padres', idx, 'localidad', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Localidad/Ciudad *</label><input className={getFieldClass('localidad', idx)} list="localidades-list" placeholder="Ciudad" value={p.localidad} onChange={v => updateArray('padres', idx, 'localidad', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Provincia *</label><input className={getFieldClass('provincia', idx)} value={p.provincia} onChange={v => updateArray('padres', idx, 'provincia', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">País *</label><input className={getFieldClass('pais', idx)} value={p.pais} onChange={v => updateArray('padres', idx, 'pais', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Código Postal *</label><input className={getFieldClass('cp', idx)} value={p.cp} onChange={v => updateArray('padres', idx, 'cp', v.target.value)} /></div>
@@ -695,7 +735,7 @@ const FormularioIngreso = () => {
                         )}
                       </td>
                       <td><input className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="Nombre completo" value={h.nombre_apellido} onChange={v => updateArray('hermanos', idx, 'nombre_apellido', v.target.value)} /></td>
-                      <td><input type="date" className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} value={h.fecha_nac} onChange={v => updateArray('hermanos', idx, 'fecha_nac', v.target.value)} /></td>
+                      <td><input type="text" className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="dd/mm/aaaa" value={h.fecha_nac} onChange={v => updateArray('hermanos', idx, 'fecha_nac', v.target.value)} /></td>
                       <td>
                         <input 
                           className="form-input" 

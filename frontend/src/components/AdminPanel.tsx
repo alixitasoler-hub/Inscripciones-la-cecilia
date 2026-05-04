@@ -23,8 +23,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
 
 const AdminPanel = () => {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
+  const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('adminUser') || 'null'));
   const [isAuth, setIsAuth] = useState(Boolean(localStorage.getItem('adminToken')));
-  const [passwordInput, setPasswordInput] = useState('');
+  const [loginForm, setLoginForm] = useState({ usuario: '', password: '' });
   const [error, setError] = useState('');
 
   const location = useLocation();
@@ -34,21 +35,27 @@ const AdminPanel = () => {
     try {
       const res = await fetch(`${API_URL}/admin/login`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${passwordInput}` }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
       });
+      const data = await res.json() as any;
       if (res.ok) {
-        setToken(passwordInput);
-        localStorage.setItem('adminToken', passwordInput);
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminUser', JSON.stringify(data.user));
         setIsAuth(true);
         setError('');
       } else {
-        setError('Contraseña incorrecta');
+        setError(data.error || 'Credenciales incorrectas');
       }
     } catch (err) { setError('Error de conexión'); }
   };
 
   const logout = () => {
-    localStorage.removeItem('adminToken'); setToken(''); setIsAuth(false);
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    setToken(''); setUser(null); setIsAuth(false);
   };
 
   if (!isAuth) {
@@ -58,20 +65,28 @@ const AdminPanel = () => {
           <Users size={30} color="var(--accent)" />
         </div>
         <h2>Acceso Administrativo</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Ingrese la contraseña maestra para continuar.</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Ingrese sus credenciales para continuar.</p>
         {error && <p className="form-error" style={{ background: '#FEE2E2', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '1rem' }}>{error}</p>}
         <form onSubmit={handleLogin} style={{marginTop: '2rem'}}>
           <div className="form-group">
             <input 
+              type="text" 
+              className="form-input" 
+              placeholder="Usuario" 
+              value={loginForm.usuario} 
+              onChange={(e) => setLoginForm({...loginForm, usuario: e.target.value})} 
+              autoFocus
+              style={{marginBottom: '1rem'}}
+            />
+            <input 
               type="password" 
               className="form-input" 
               placeholder="Contraseña" 
-              value={passwordInput} 
-              onChange={(e) => setPasswordInput(e.target.value)} 
-              autoFocus
+              value={loginForm.password} 
+              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} 
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Ingresar al Panel</button>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>Ingresar al Panel</button>
         </form>
       </div>
     );
@@ -84,28 +99,48 @@ const AdminPanel = () => {
       {showSidebar && (
         <aside className="sidebar no-print">
           <div className="card sidebar-card" style={{ padding: '1.5rem' }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>Módulos</h3>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{user?.nombre}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{user?.usuario}</div>
+            </div>
+            <h3 style={{ marginBottom: '1rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>Módulos</h3>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <NavLink 
                 to="/admin" 
                 end
                 className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
                 style={{justifyContent: 'flex-start'}}
               >
-                <Users size={18} /> Bandeja de Entrada
+                <Users size={18} /> Solicitudes
               </NavLink>
               <NavLink 
                 to="/admin/agenda" 
                 className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
                 style={{justifyContent: 'flex-start'}}
               >
-                <Calendar size={18} /> Agenda de Entrevistas
+                <Calendar size={18} /> Agenda
               </NavLink>
+              <NavLink 
+                to="/admin/metricas" 
+                className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
+                style={{justifyContent: 'flex-start'}}
+              >
+                <Clock size={18} /> Métricas e Historial
+              </NavLink>
+              {(user?.rol === 'superadmin' || user?.rol === 'admin') && (
+                <NavLink 
+                  to="/admin/usuarios" 
+                  className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
+                  style={{justifyContent: 'flex-start'}}
+                >
+                  <Users size={18} /> Usuarios
+                </NavLink>
+              )}
               
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '1rem 0' }}></div>
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '1rem 0' }}></div>
               
               <button onClick={logout} className="btn btn-ghost" style={{ justifyContent: 'flex-start', color: 'var(--error)' }}>
-                <Clock size={18} /> Cerrar Sesión
+                <ArrowLeft size={18} /> Cerrar Sesión
               </button>
             </nav>
           </div>
@@ -116,6 +151,8 @@ const AdminPanel = () => {
         <Routes>
           <Route path="/" element={<BandejaEntrada token={token} />} />
           <Route path="/agenda" element={<Agenda token={token} />} />
+          <Route path="/metricas" element={<MetricasHistorial token={token} />} />
+          <Route path="/usuarios" element={<GestionUsuarios token={token} />} />
           <Route path="/ficha/:id" element={<DetalleFicha token={token} />} />
         </Routes>
       </main>
@@ -271,6 +308,8 @@ const BandejaEntrada = ({ token }: { token: string }) => {
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterStatus, setFilterStatus] = useState('activos');
+  const [filterResult, setFilterResult] = useState('');
+  const [filterDates, setFilterDates] = useState({ from: '', to: '' });
   const [confirmStateChange, setConfirmStateChange] = useState<{id: number, newState: string} | null>(null);
   
   const navigate = useNavigate();
@@ -294,9 +333,13 @@ const BandejaEntrada = ({ token }: { token: string }) => {
           ? !['finalizado', 'cancelado'].includes(f.estado) 
           : f.estado === filterStatus
       ) : true;
-      return matchSearch && matchLevel && matchStatus;
+      const matchResult = filterResult ? f.decision_final === filterResult : true;
+      const matchDateFrom = filterDates.from ? f.fecha_solicitud >= filterDates.from : true;
+      const matchDateTo = filterDates.to ? f.fecha_solicitud <= (filterDates.to + 'T23:59:59') : true;
+      
+      return matchSearch && matchLevel && matchStatus && matchResult && matchDateFrom && matchDateTo;
     });
-  }, [fichas, search, filterLevel, filterStatus]);
+  }, [fichas, search, filterLevel, filterStatus, filterResult, filterDates]);
 
   const exportToCSV = () => {
     if (filteredFichas.length === 0) return;
@@ -364,6 +407,18 @@ const BandejaEntrada = ({ token }: { token: string }) => {
             <option value="finalizado">Finalizado</option>
             <option value="cancelado">Cancelado</option>
           </select>
+          <select className="form-select" style={{ width: 'auto', minWidth: '150px' }} value={filterResult} onChange={e => setFilterResult(e.target.value)}>
+            <option value="">Resultado...</option>
+            <option value="ingresa">Ingresa</option>
+            <option value="no_ingresa">No Ingresa</option>
+            <option value="espera">En Espera</option>
+          </select>
+          <div className="flex gap-2 items-center">
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Desde:</span>
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={filterDates.from} onChange={e => setFilterDates({...filterDates, from: e.target.value})} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hasta:</span>
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={filterDates.to} onChange={e => setFilterDates({...filterDates, to: e.target.value})} />
+          </div>
         </div>
       </div>
 
@@ -1019,5 +1074,268 @@ const Agenda = ({ token }: { token: string }) => {
     </div>
   );
 }
+
+const MetricasHistorial = ({ token }: { token: string }) => {
+  const [data, setData] = useState<{stats: any[], history: any[]}>({ stats: [], history: [] });
+  const [loading, setLoading] = useState(true);
+  const [dates, setDates] = useState({ 
+    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], 
+    to: new Date().toISOString().split('T')[0] 
+  });
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/metrics?from=${dates.from}&to=${dates.to}T23:59:59`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      const resData = await res.json();
+      setData(resData);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [token, dates]);
+
+  return (
+    <div className="animate-in">
+      <div className="flex justify-between items-center mb-6">
+        <h1>Métricas e Historial</h1>
+        <div className="flex gap-4 items-center bg-white p-2 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase">Desde</span>
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={dates.from} onChange={e => setDates({...dates, from: e.target.value})} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase">Hasta</span>
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={dates.to} onChange={e => setDates({...dates, to: e.target.value})} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+        {['Nivel Inicial', 'EPO (Primaria)', 'ESO (Secundaria)'].map(nivel => {
+          const stat = data.stats?.find((s: any) => s.nivel_ingreso === nivel) || { total: 0, concretados: 0 };
+          return (
+            <div key={nivel} className="card" style={{ padding: '1.5rem', borderTop: '4px solid var(--primary)' }}>
+              <h3 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{nivel}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{stat.total}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: '0.5rem' }}>SOLICITUDES</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>{stat.concretados}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>INGRESOS</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="card">
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem' }}><Clock size={20} /> Historial de Cambios</h2>
+          <button className="btn btn-ghost btn-sm" onClick={load}><Clock size={16} /> Actualizar</button>
+        </div>
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Ficha / Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.history?.map((h: any) => (
+                <tr key={h.id}>
+                  <td style={{ fontSize: '0.8rem' }}>{new Date(h.fecha).toLocaleString()}</td>
+                  <td style={{ fontWeight: 600 }}>{h.usuario_nombre}</td>
+                  <td>
+                    <span className={`badge badge-${h.accion === 'edición' ? 'contactado' : (h.accion === 'borrado' ? 'cancelada' : 'pendiente')}`}>
+                      {h.accion}
+                    </span>
+                  </td>
+                  <td>
+                    {h.ficha_nombre ? (
+                      <Link to={`/admin/ficha/${h.ficha_id}`} style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                        {h.ficha_nombre}
+                      </Link>
+                    ) : '-'}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      {h.detalles}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data.history?.length === 0 && (
+                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No hay actividad registrada.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const GestionUsuarios = ({ token }: { token: string }) => {
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState<any | null>(null);
+  const [formData, setFormData] = useState({ usuario: '', password: '', nombre: '', rol: 'admin' });
+
+  const cargar = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      setUsuarios(data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { cargar(); }, [token]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.usuario || (!editMode && !formData.password)) return alert('Usuario y contraseña obligatorios');
+    
+    const url = editMode ? `${API_URL}/admin/usuarios/${editMode.id}` : `${API_URL}/admin/usuarios`;
+    const method = editMode ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        setFormData({ usuario: '', password: '', nombre: '', rol: 'admin' });
+        setEditMode(null);
+        cargar();
+      } else {
+        const err = await res.json() as any;
+        alert(err.error);
+      }
+    } catch (e) { alert('Error al procesar solicitud'); }
+  };
+
+  const handleToggleActivo = async (u: any) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/usuarios/${u.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ activo: !u.activo })
+      });
+      if (res.ok) cargar();
+    } catch (e) { alert('Error'); }
+  };
+
+  const handleBorrar = async (id: number) => {
+    if (!confirm('¿Eliminar este usuario definitivamente?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/usuarios/${id}`, { 
+        method: 'DELETE', 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      if (res.ok) cargar();
+      else {
+        const err = await res.json() as any;
+        alert(err.error);
+      }
+    } catch (e) { alert('Error'); }
+  };
+
+  const startEdit = (u: any) => {
+    setEditMode(u);
+    setFormData({ usuario: u.usuario, password: '', nombre: u.nombre, rol: u.rol });
+  };
+
+  return (
+    <div className="animate-in">
+      <div className="flex justify-between items-center mb-6">
+        <h1>Gestión de Usuarios</h1>
+        {editMode && <button className="btn btn-outline btn-sm" onClick={() => { setEditMode(null); setFormData({ usuario: '', password: '', nombre: '', rol: 'admin' }); }}>Cancelar Edición</button>}
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 300px) 1fr', gap: '1.5rem', marginTop: '1rem' }}>
+        <div className="card" style={{ padding: '1.5rem', height: 'fit-content', position: 'sticky', top: '2rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>{editMode ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">Nombre Real</label>
+              <input className="form-input" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} placeholder="Ej: Juan Perez" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Usuario</label>
+              <input className="form-input" value={formData.usuario} onChange={e => setFormData({...formData, usuario: e.target.value})} placeholder="Ej: jperez" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Contraseña {editMode && '(dejar vacío para no cambiar)'}</label>
+              <input type="password" className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Rol</label>
+              <select className="form-select" value={formData.rol} onChange={e => setFormData({...formData, rol: e.target.value})}>
+                <option value="admin">Administrador</option>
+                <option value="superadmin">Super Administrador</option>
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+              {editMode ? 'Guardar Cambios' : 'Crear Usuario'}
+            </button>
+          </form>
+        </div>
+
+        <div className="card" style={{ padding: '0.75rem' }}>
+          <div className="admin-table-container" style={{ border: 'none', boxShadow: 'none' }}>
+            <table className="admin-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '0.6rem 0.4rem', width: '25%', fontSize: '0.65rem' }}>Nombre</th>
+                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Usuario</th>
+                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Rol</th>
+                  <th style={{ padding: '0.6rem 0.4rem', width: '15%', fontSize: '0.65rem' }}>Estado</th>
+                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u: any) => (
+                  <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.6 }}>
+                    <td style={{ padding: '0.6rem 0.4rem', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><strong>{u.nombre}</strong></td>
+                    <td style={{ padding: '0.6rem 0.4rem', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.usuario}</td>
+                    <td style={{ padding: '0.6rem 0.4rem' }}><span className={`badge badge-${u.rol === 'superadmin' ? 'contactado' : 'pendiente'}`} style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}>{u.rol}</span></td>
+                    <td style={{ padding: '0.6rem 0.4rem' }}>
+                      <button 
+                        className={`badge ${u.activo ? 'badge-pendiente' : 'badge-cancelada'}`} 
+                        style={{ cursor: 'pointer', border: 'none', appearance: 'none', fontSize: '0.6rem', padding: '0.2rem 0.4rem' }}
+                        onClick={() => handleToggleActivo(u)}
+                      >
+                        {u.activo ? 'ACTIVO' : 'INACTIVO'}
+                      </button>
+                    </td>
+                    <td style={{ padding: '0.6rem 0.4rem' }}>
+                      <div className="flex gap-1">
+                        <button className="btn btn-ghost" style={{ padding: '0.2rem' }} onClick={() => startEdit(u)}><Edit3 size={14} /></button>
+                        <button className="btn btn-ghost" style={{ color: 'var(--error)', padding: '0.2rem' }} onClick={() => handleBorrar(u.id)}><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default AdminPanel;

@@ -63,3 +63,6 @@ Muchas gracias."
 -el domicilio tanto de alumno como de adultos debe estar desdoblado en dirección, localidad, provincia, país, código postal
 -en la parte de la discapacidad, debe ir primero la pregunta de si presenta alguna , si contesta que si pedir especificar cuál y recién ahí preguntar si tiene CUD (sino, no tiene sentido que exista esa pregunta)
 
+-cambiar el formato del ingreso de fecha: no elegir de calendario, sino poner solamente la máscara dd/mm/aaaa
+- en los datos de los adultos, poner el mismo esquema que en los daros del alumno: posibilidad de elegir entre ciudades precargadas más comunes (Santa Fe, Monte Vera, Recreo, Esperanza, Paraná) o ingreso manual y autocompletar en función de ello Provincia, País, código postal, siempre con posibilidad de edición.
+-en la última pantalla de la ficha, la del acuerdo de admisión y permanencia, desaparece el botón de envío (aunque el link permanece operativo) y al querer enviar, da un error (failed to fetch) 
