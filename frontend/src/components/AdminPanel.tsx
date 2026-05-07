@@ -6,7 +6,6 @@ import {
   Search, 
   Download, 
   ChevronRight, 
-  Mail,
   Clock,
   Printer,
   MessageCircle,
@@ -61,8 +60,8 @@ const AdminPanel = () => {
   if (!isAuth) {
     return (
       <div className="card animate-in" style={{ maxWidth: '400px', margin: '4rem auto', padding: '2.5rem', textAlign: 'center' }}>
-        <div style={{ background: 'var(--accent-soft)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-          <Users size={30} color="var(--accent)" />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <img src="/logo.jpg" alt="Logo Escuela La Cecilia" style={{ width: '120px', height: 'auto', borderRadius: '50%', border: '3px solid var(--accent)', padding: '4px' }} />
         </div>
         <h2>Acceso Administrativo</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Ingrese sus credenciales para continuar.</p>
@@ -100,6 +99,9 @@ const AdminPanel = () => {
         <aside className="sidebar no-print">
           <div className="card sidebar-card" style={{ padding: '1.5rem' }}>
             <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <img src="/logo.jpg" alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border-color)' }} />
+                </div>
                 <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{user?.nombre}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{user?.usuario}</div>
             </div>
@@ -178,7 +180,8 @@ const GestionarEntrevistaModal = ({
     fecha_hora: entrevista.fecha_hora?.replace(' ', 'T').slice(0, 16) || '',
     estado: entrevista.estado,
     notas: entrevista.notas || '',
-    respuesta: entrevista.respuesta || ''
+    respuesta: entrevista.respuesta || '',
+    decision_final: entrevista.decision_final || ''
   });
 
   const handleSave = async () => {
@@ -248,7 +251,7 @@ const GestionarEntrevistaModal = ({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
             <div className="form-group">
               <label className="form-label">Fecha y Hora</label>
               <input 
@@ -259,13 +262,28 @@ const GestionarEntrevistaModal = ({
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Respuesta Familia</label>
+              <label className="form-label">Rta. Familia</label>
               <input 
                 type="text" 
                 className="form-input" 
                 value={formData.respuesta} 
+                placeholder="Ej: Confirmado"
                 onChange={e => setFormData({...formData, respuesta: e.target.value})}
               />
+            </div>
+            <div className="form-group">
+              <label className="form-label" style={{color:'var(--primary)', fontWeight:800}}>Resultado Admisión</label>
+              <select 
+                className="form-select" 
+                value={formData.decision_final} 
+                onChange={e => setFormData({...formData, decision_final: e.target.value, estado: e.target.value === 'ingresa' ? 'realizada' : formData.estado})}
+                style={{borderColor: formData.decision_final ? 'var(--primary)' : ''}}
+              >
+                <option value="">Sin definir...</option>
+                <option value="ingresa">✅ INGRESA</option>
+                <option value="no_ingresa">❌ NO INGRESA</option>
+                <option value="espera">⏳ LISTA ESPERA</option>
+              </select>
             </div>
           </div>
 
@@ -521,6 +539,56 @@ const BandejaEntrada = ({ token }: { token: string }) => {
   );
 };
 
+const EditField = ({ 
+  label, 
+  name, 
+  isEditing, 
+  ficha, 
+  updateFicha, 
+  type = 'text', 
+  full = false, 
+  options = null 
+}: { 
+  label: string, 
+  name: string, 
+  isEditing: boolean, 
+  ficha: any, 
+  updateFicha: (n: string, v: any) => void,
+  type?: string, 
+  full?: boolean, 
+  options?: {v:any, l:string}[] | null 
+}) => {
+  const val = ficha[name];
+  if (!isEditing) {
+    let displayVal = val;
+    if (type === 'date' && val) displayVal = val;
+    if (options) displayVal = options.find(o => o.v == val)?.l || val;
+    if (name === 'posee_discapacidad' || name === 'tiene_cud' || name === 'repitente') displayVal = val ? 'SÍ' : 'NO';
+    
+    return (
+      <div className={full ? 'full-print' : ''}>
+        <strong>{label}:</strong> {displayVal || '-'}
+      </div>
+    );
+  }
+
+  return (
+    <div className={full ? 'full-print' : ''} style={{ marginBottom: '0.5rem' }}>
+      <label className="form-label" style={{ fontSize: '0.7rem', marginBottom: '0.1rem' }}>{label}</label>
+      {options ? (
+        <select name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-select" style={{ padding: '0.25rem' }}>
+          <option value="">Seleccionar...</option>
+          {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        </select>
+      ) : type === 'textarea' ? (
+        <textarea name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-textarea" style={{ padding: '0.25rem', minHeight: '60px' }} />
+      ) : (
+        <input type={type} name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-input" style={{ padding: '0.25rem' }} />
+      )}
+    </div>
+  );
+};
+
 const DetalleFicha = ({ token }: { token: string }) => {
   const [data, setData] = useState<any>(null);
   const [agendaDate, setAgendaDate] = useState('');
@@ -644,39 +712,29 @@ const DetalleFicha = ({ token }: { token: string }) => {
 
   const { ficha, escolaridad, padres, hermanos, convivientes } = isEditing ? tempData : data;
   const isWhatsApp = ficha.contacto_entrevista_medio === 'WhatsApp';
-  const waLink = isWhatsApp ? `https://wa.me/${ficha.contacto_entrevista_dato?.replace(/\D/g,'')}?text=Hola ${ficha.contacto_entrevista_nombre}, nos comunicamos de la Escuela La Cecilia...` : null;
+  
+  // Buscar la próxima entrevista programada para el mensaje de WA
+  const proximas = entrevistas.filter((e: any) => e.estado === 'programada' || e.estado === 'movida');
+  const proxima = proximas.length > 0 ? proximas[0] : null;
+  
+  let fechaStr = "[fecha]";
+  let horaStr = "[hora]";
+  
+  if (proxima) {
+    const dt = new Date(proxima.fecha_hora);
+    fechaStr = dt.toLocaleDateString('es-AR');
+    horaStr = dt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs';
+  }
 
-  const EditField = ({ label, name, type = 'text', full = false, options = null }: { label: string, name: string, type?: string, full?: boolean, options?: {v:any, l:string}[] | null }) => {
-    const val = ficha[name];
-    if (!isEditing) {
-      let displayVal = val;
-      if (type === 'date' && val) displayVal = val;
-      if (options) displayVal = options.find(o => o.v == val)?.l || val;
-      if (name === 'posee_discapacidad' || name === 'tiene_cud' || name === 'repitente') displayVal = val ? 'SÍ' : 'NO';
-      
-      return (
-        <div className={full ? 'full-print' : ''}>
-          <strong>{label}:</strong> {displayVal || '-'}
-        </div>
-      );
-    }
+  const alumno = `${ficha.nombre} ${ficha.apellido}`;
+  const mensajeWA = `¡Hola!
+Hemos recibido la solicitud de inscripción de ${alumno}. Te proponemos realizar la entrevista el día ${fechaStr} a las ${horaStr}.
+Te pedimos confirmar la disponibilidad para ese horario. 
+En caso de no poder asistir, agradeceremos que nos avises con anticipación por este mismo medio.
+Muchas gracias.`;
 
-    return (
-      <div className={full ? 'full-print' : ''} style={{ marginBottom: '0.5rem' }}>
-        <label className="form-label" style={{ fontSize: '0.7rem', marginBottom: '0.1rem' }}>{label}</label>
-        {options ? (
-          <select name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-select" style={{ padding: '0.25rem' }}>
-            <option value="">Seleccionar...</option>
-            {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-          </select>
-        ) : type === 'textarea' ? (
-          <textarea name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-textarea" style={{ padding: '0.25rem', minHeight: '60px' }} />
-        ) : (
-          <input type={type} name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-input" style={{ padding: '0.25rem' }} />
-        )}
-      </div>
-    );
-  };
+  const waLink = isWhatsApp ? `https://wa.me/${ficha.contacto_entrevista_dato?.replace(/\D/g,'')}?text=${encodeURIComponent(mensajeWA)}` : null;
+
 
   return (
     <div className="animate-in">
@@ -721,7 +779,7 @@ const DetalleFicha = ({ token }: { token: string }) => {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <EditField label="Estado" name="estado" options={[{v:'pendiente', l:'PENDIENTE'}, {v:'contactado', l:'CONTACTADO'}, {v:'entrevista_programada', l:'ENTREVISTA'}, {v:'finalizado', l:'FINALIZADO'}, {v:'cancelado', l:'CANCELADO'}]} />
+            <EditField label="Estado" name="estado" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'pendiente', l:'PENDIENTE'}, {v:'contactado', l:'CONTACTADO'}, {v:'entrevista_programada', l:'ENTREVISTA'}, {v:'finalizado', l:'FINALIZADO'}, {v:'cancelado', l:'CANCELADO'}]} />
             <p style={{ fontSize: '0.8rem' }}>Solicitud: {new Date(ficha.fecha_solicitud).toLocaleDateString('es-AR')}</p>
           </div>
         </header>
@@ -729,46 +787,46 @@ const DetalleFicha = ({ token }: { token: string }) => {
         <section className="section-print">
           <h3 className="section-title-print">Datos del Alumno</h3>
           <div className="grid-print">
-            <EditField label="Apellido" name="apellido" full />
-            <EditField label="Nombre" name="nombre" full />
-            <EditField label="DNI Tipo" name="dni_tipo" options={[{v:'DNI', l:'DNI'}, {v:'Pasaporte', l:'Pasaporte'}, {v:'Cédula', l:'Cédula'}]} />
-            <EditField label="DNI Número" name="dni_nro" />
-            <EditField label="Nivel" name="nivel_ingreso" options={[{v:'Nivel Inicial', l:'Nivel Inicial'}, {v:'EPO (Primaria)', l:'EPO (Primaria)'}, {v:'ESO (Secundaria)', l:'ESO (Secundaria)'}]} />
-            <EditField label="Grado/Año" name="grado_anio" />
-            <EditField label="Repitente" name="repitente" options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
-            <EditField label="Nacimiento" name="fecha_nac" type="date" />
-            <EditField label="Lugar Nac." name="lugar_nac" />
-            <EditField label="Sexo" name="sexo" options={[{v:'Femenino', l:'Femenino'}, {v:'Masculino', l:'Masculino'}, {v:'No binario', l:'No binario'}]} />
-            <EditField label="Dirección" name="direccion" full />
-            <EditField label="Localidad" name="localidad" />
-            <EditField label="Provincia" name="provincia" />
-            <EditField label="País" name="pais" />
-            <EditField label="CP" name="cp" />
-            <EditField label="Teléfono" name="telefono_alumno" />
-            <EditField label="Email" name="email_alumno" />
+            <EditField label="Apellido" name="apellido" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
+            <EditField label="Nombre" name="nombre" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
+            <EditField label="DNI Tipo" name="dni_tipo" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'DNI', l:'DNI'}, {v:'Pasaporte', l:'Pasaporte'}, {v:'Cédula', l:'Cédula'}]} />
+            <EditField label="DNI Número" name="dni_nro" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Nivel" name="nivel_ingreso" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'Nivel Inicial', l:'Nivel Inicial'}, {v:'EPO (Primaria)', l:'EPO (Primaria)'}, {v:'ESO (Secundaria)', l:'ESO (Secundaria)'}]} />
+            <EditField label="Grado/Año" name="grado_anio" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Repitente" name="repitente" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
+            <EditField label="Nacimiento" name="fecha_nac" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="date" />
+            <EditField label="Lugar Nac." name="lugar_nac" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Sexo" name="sexo" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'Femenino', l:'Femenino'}, {v:'Masculino', l:'Masculino'}, {v:'No binario', l:'No binario'}]} />
+            <EditField label="Dirección" name="direccion" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
+            <EditField label="Localidad" name="localidad" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Provincia" name="provincia" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="País" name="pais" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="CP" name="cp" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Teléfono" name="telefono_alumno" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="Email" name="email_alumno" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
           </div>
         </section>
 
         <section className="section-print" style={{ border: '2px solid var(--accent)', background: 'var(--accent-soft)' }}>
           <h3 className="section-title-print" style={{ background: 'var(--accent) !important' }}>Contacto para Entrevista (Coordinación)</h3>
           <div className="grid-print">
-            <EditField label="Nombre de Contacto" name="contacto_entrevista_nombre" full />
-            <EditField label="Medio de Contacto" name="contacto_entrevista_medio" options={[{v:'WhatsApp', l:'WhatsApp'}, {v:'Teléfono', l:'Teléfono'}, {v:'Email', l:'Email'}]} />
-            <EditField label="Dato de Contacto" name="contacto_entrevista_dato" />
+            <EditField label="Nombre de Contacto" name="contacto_entrevista_nombre" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
+            <EditField label="Medio de Contacto" name="contacto_entrevista_medio" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'WhatsApp', l:'WhatsApp'}, {v:'Teléfono', l:'Teléfono'}, {v:'Email', l:'Email'}]} />
+            <EditField label="Dato de Contacto" name="contacto_entrevista_dato" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
           </div>
         </section>
 
         <section className="section-print">
           <h3 className="section-title-print">Salud y CUD</h3>
           <div className="grid-print">
-            <EditField label="Detalles de Salud" name="salud_detalles" type="textarea" full />
-            <EditField label="Embarazo/Parto" name="embarazo_parto" type="textarea" full />
-            <EditField label="Obra Social" name="obra_social" />
-            <EditField label="¿Tiene Discapacidad?" name="posee_discapacidad" options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
+            <EditField label="Detalles de Salud" name="salud_detalles" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
+            <EditField label="Embarazo/Parto" name="embarazo_parto" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
+            <EditField label="Obra Social" name="obra_social" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
+            <EditField label="¿Tiene Discapacidad?" name="posee_discapacidad" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
             {(isEditing ? ficha?.posee_discapacidad : data.ficha.posee_discapacidad) && (
               <>
-                <EditField label="Especif. Discapacidad" name="discapacidad" full />
-                <EditField label="¿Tiene CUD?" name="tiene_cud" options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
+                <EditField label="Especif. Discapacidad" name="discapacidad" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
+                <EditField label="¿Tiene CUD?" name="tiene_cud" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
               </>
             )}
           </div>
@@ -838,18 +896,23 @@ const DetalleFicha = ({ token }: { token: string }) => {
                     <div className="form-group"><label className="form-label">Celular</label><input value={p.celular || ''} onChange={v => updateArrayItem('padres', i, 'celular', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Tel. Casa</label><input value={p.telefono_casa || ''} onChange={v => updateArrayItem('padres', i, 'telefono_casa', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Email</label><input value={p.email || ''} onChange={v => updateArrayItem('padres', i, 'email', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">F. Nacimiento</label><input value={p.fecha_nac || ''} onChange={v => updateArrayItem('padres', i, 'fecha_nac', v.target.value)} /></div>
                     <div className="form-group full-print"><label className="form-label">Dirección</label><input value={p.direccion || ''} onChange={v => updateArrayItem('padres', i, 'direccion', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Localidad</label><input value={p.localidad || ''} onChange={v => updateArrayItem('padres', i, 'localidad', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Ocupación</label><input value={p.profesion_ocupacion || ''} onChange={v => updateArrayItem('padres', i, 'profesion_ocupacion', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Lugar de Trabajo</label><input value={p.empresa_laboral || ''} onChange={v => updateArrayItem('padres', i, 'empresa_laboral', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Ubicación Trabajo</label><input value={p.direccion_laboral || ''} onChange={v => updateArrayItem('padres', i, 'direccion_laboral', v.target.value)} /></div>
+                    <div className="form-group"><label className="form-label">Horario Laboral</label><input value={p.horarios_laborales || ''} onChange={v => updateArrayItem('padres', i, 'horarios_laborales', v.target.value)} /></div>
                   </>
                 ) : (
                   <>
                     <div><strong>Nombre:</strong> {p.apellido}, {p.nombre}</div>
                     <div><strong>DNI:</strong> {p.dni_nro}</div>
+                    <div><strong>F. Nacimiento:</strong> {p.fecha_nac || '-'}</div>
                     <div><strong>Contacto:</strong> {p.celular} / {p.telefono_casa}</div>
                     <div><strong>Email:</strong> {p.email}</div>
                     <div className="full-print"><strong>Domicilio:</strong> {p.direccion}, {p.localidad}</div>
-                    <div><strong>Ocupación:</strong> {p.profesion_ocupacion}</div>
+                    <div className="full-print"><strong>Laboral:</strong> {p.profesion_ocupacion} en {p.empresa_laboral || '-'} ({p.direccion_laboral || '-'}) - {p.horarios_laborales || '-'}</div>
                   </>
                 )}
               </div>
@@ -860,11 +923,11 @@ const DetalleFicha = ({ token }: { token: string }) => {
         <section className="section-print">
           <h3 className="section-title-print">Antecedentes y Motivación</h3>
           <div className="grid-print">
-            <EditField label="Motivo Elección" name="motivo_eleccion" type="textarea" full />
-            <EditField label="Socioeconómico" name="situacion_socioeconomica" options={[{v:'Muy buena', l:'Muy buena'}, {v:'Buena', l:'Buena'}, {v:'Regular', l:'Regular'}, {v:'Mala', l:'Mala'}]} />
-            <EditField label="Otros Datos" name="otros_datos" type="textarea" full />
-            <EditField label="Prob. Aprendizaje" name="problemas_aprendizaje" type="textarea" full />
-            <EditField label="Otras Actividades" name="otras_actividades" type="textarea" full />
+            <EditField label="Motivo Elección" name="motivo_eleccion" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
+            <EditField label="Socioeconómico" name="situacion_socioeconomica" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'Muy buena', l:'Muy buena'}, {v:'Buena', l:'Buena'}, {v:'Regular', l:'Regular'}, {v:'Mala', l:'Mala'}]} />
+            <EditField label="Otros Datos" name="otros_datos" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
+            <EditField label="Prob. Aprendizaje" name="problemas_aprendizaje" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
+            <EditField label="Otras Actividades" name="otras_actividades" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
           </div>
         </section>
 
@@ -1005,13 +1068,6 @@ const Agenda = ({ token }: { token: string }) => {
     return groups;
   };
 
-  const estadoColor: Record<string, string> = {
-    programada: 'var(--accent)',
-    movida: 'var(--warning)',
-    realizada: 'var(--success)',
-    cancelada: 'var(--error)',
-  };
-
   const currentList = activeTab === 'proximas' ? proximas : (activeTab === 'realizadas' ? realizadas : canceladas);
   const grupos = groupByDay(currentList);
 
@@ -1037,33 +1093,51 @@ const Agenda = ({ token }: { token: string }) => {
       ) : (
         Object.entries(grupos).map(([dia, items]) => (
           <div key={dia} style={{ marginBottom: '2.5rem' }}>
-            <div className="timeline-day">{dia}</div>
-            {items.map((e: any) => (
-              <div key={e.id} className="card agenda-card" style={{ padding: '1.25rem', marginBottom: '1rem', borderLeft: `6px solid ${estadoColor[e.estado]}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                    <div style={{ background: 'var(--bg)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{new Date(e.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, marginTop: '0.2rem' }}>HS</div>
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
-                      <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--accent)' }}>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Contacto para Cita:</div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.contacto_entrevista_nombre || 'Sin nombre'}</div>
-                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{e.contacto_entrevista_medio}: {e.contacto_entrevista_dato || '-'}</div>
-                      </div>
-                      {e.respuesta && <div style={{ fontSize: '0.8125rem', color: 'var(--success)', fontWeight: 700, marginTop: '0.5rem' }}>💬 Familia: {e.respuesta}</div>}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-primary" onClick={() => setSelectedEntrevista(e)}>Gestionar</button>
-                    <button className="btn btn-ghost" style={{ color: 'var(--error)', padding: '0.5rem' }} onClick={() => handleBorrarEntrevista(e.id)} disabled={saving}><Trash2 size={18} /></button>
-                    <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline" style={{ padding: '0.5rem' }}><ChevronRight size={18} /></Link>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div className="timeline-day" style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', fontWeight: 800, marginBottom: '1rem', fontSize: '0.9rem', textTransform: 'capitalize' }}>{dia}</div>
+            <div className="admin-table-container" style={{ boxShadow: 'none', border: '1px solid var(--border-color)' }}>
+              <table className="admin-table">
+                <thead>
+                  <tr style={{background: '#f8fafc'}}>
+                    <th style={{width: '100px'}}>Hora</th>
+                    <th>Alumno / Nivel</th>
+                    <th>Contacto</th>
+                    <th>Estado / Rta</th>
+                    <th style={{textAlign: 'right'}}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((e: any) => (
+                    <tr key={e.id}>
+                      <td>
+                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
+                          {new Date(e.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 700 }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{e.nivel_ingreso} - {e.grado_anio}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.85rem' }}><strong>{e.contacto_entrevista_nombre}</strong></div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{e.contacto_entrevista_medio}: {e.contacto_entrevista_dato}</div>
+                      </td>
+                      <td>
+                        <span className={`badge badge-${e.estado}`} style={{fontSize: '0.7rem'}}>{e.estado}</span>
+                        {e.respuesta && <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '0.2rem', fontWeight: 600 }}>💬 {e.respuesta}</div>}
+                        {e.decision_final && <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.2rem' }}>RESULTADO: {e.decision_final.toUpperCase()}</div>}
+                      </td>
+                      <td>
+                        <div className="flex justify-end gap-1">
+                          <button className="btn btn-primary btn-sm" onClick={() => setSelectedEntrevista(e)} title="Gestionar"><Edit3 size={14} /></button>
+                          <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline btn-sm" title="Ver Ficha"><ChevronRight size={14} /></Link>
+                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--error)' }} onClick={() => handleBorrarEntrevista(e.id)} disabled={saving} title="Borrar"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))
       )}
@@ -1077,7 +1151,7 @@ const Agenda = ({ token }: { token: string }) => {
 
 const MetricasHistorial = ({ token }: { token: string }) => {
   const [data, setData] = useState<{stats: any[], history: any[]}>({ stats: [], history: [] });
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [dates, setDates] = useState({ 
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], 
     to: new Date().toISOString().split('T')[0] 
@@ -1187,7 +1261,7 @@ const MetricasHistorial = ({ token }: { token: string }) => {
 
 const GestionUsuarios = ({ token }: { token: string }) => {
   const [usuarios, setUsuarios] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [editMode, setEditMode] = useState<any | null>(null);
   const [formData, setFormData] = useState({ usuario: '', password: '', nombre: '', rol: 'admin' });
 

@@ -66,3 +66,7 @@ Muchas gracias."
 -cambiar el formato del ingreso de fecha: no elegir de calendario, sino poner solamente la máscara dd/mm/aaaa
 - en los datos de los adultos, poner el mismo esquema que en los daros del alumno: posibilidad de elegir entre ciudades precargadas más comunes (Santa Fe, Monte Vera, Recreo, Esperanza, Paraná) o ingreso manual y autocompletar en función de ello Provincia, País, código postal, siempre con posibilidad de edición.
 -en la última pantalla de la ficha, la del acuerdo de admisión y permanencia, desaparece el botón de envío (aunque el link permanece operativo) y al querer enviar, da un error (failed to fetch) 
+
+Ahora es necsario separar el front de la ficha de inscripción del de la administración. A la ficha se va a acceder a través de un vínculo en la página de la escuela.
+En la parte de administración, deberíamos poner usuarios y contraseñas y que queden registrados los cambios o ediciones que haga cada uno. También llevar un historial de solicitudes enviadas, con filtros para verlo por nivel, rango de fechas y resultado.
+También podemos ahora si incluir algunas métricas, por ejemplo: por nivel, la cantidad de solicitudes enviadas en determinado rango de fechas y cuántos ingresos se concretaron. 

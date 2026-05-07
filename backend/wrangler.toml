@@ -9,8 +9,10 @@ mode = "smart"
 binding = "DB"
 database_name = "inscripciones_db"
 database_id = "7ffed04c-fea2-47dd-a195-50124927e104"
+migrations_dir = "db/migrations"
 
 [vars]
 # El password de administrador (se puede sobrescribir en el dashboard de Cloudflare para mayor seguridad)
 ADMIN_PASSWORD = "admin"
 FRONTEND_URL = "https://la-cecilia-inscripciones.pages.dev" # URL de producción en Pages
+AUTH_SECRET = "ceci2026_super_secret_key_change_me_in_cloudflare"

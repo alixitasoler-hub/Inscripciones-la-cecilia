@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   usuario TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   nombre TEXT,
-  rol TEXT DEFAULT 'admin'
+  rol TEXT DEFAULT 'admin',
+  activo INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS historial_cambios (

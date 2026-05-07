@@ -5,6 +5,9 @@ export interface Env {
   ADMIN_PASSWORD: string;
   FRONTEND_URL: string;
   RESEND_API_KEY: string;
+  AUTH_SECRET: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
 }
 
 const corsHeaders = {
@@ -20,6 +23,41 @@ const jsonResponse = (data: any, status = 200) => {
   });
 };
 
+const generateSignature = async (text: string, secret: string) => {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(text));
+  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+};
+
+const hashPassword = async (password: string, salt?: string) => {
+  const encoder = new TextEncoder();
+  const s = salt ? 
+    new Uint8Array(atob(salt).split("").map(c => c.charCodeAt(0))) : 
+    crypto.getRandomValues(new Uint8Array(16));
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const buffer = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: s, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  
+  const hash = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  const saltStr = btoa(String.fromCharCode(...s));
+  return `${saltStr}.${hash}`;
+};
+
+const verifyPassword = async (password: string, storedHash: string) => {
+  if (!storedHash.includes('.')) return false; 
+  const [salt] = storedHash.split('.');
+  const newHash = await hashPassword(password, salt);
+  return newHash === storedHash;
+};
+
 const getUserIdFromAuth = async (request: Request, env: Env) => {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -31,7 +69,22 @@ const getUserIdFromAuth = async (request: Request, env: Env) => {
   }
 
   try {
-    const [id, usuario, expires] = atob(token).split(':');
+    const parts = token.split('.');
+    // Compatibilidad temporal con tokens antiguos (sin firma)
+    if (parts.length === 1) {
+      const [id, usuario, expires] = atob(token).split(':');
+      if (parseInt(expires) < Date.now()) return null;
+      return { id: parseInt(id), usuario, expires: parseInt(expires) };
+    }
+    
+    if (parts.length !== 2) return null;
+    const payload = parts[0];
+    const signature = parts[1];
+
+    const expectedSignature = await generateSignature(payload, env.AUTH_SECRET || 'default_fallback_secret');
+    if (signature !== expectedSignature) return null;
+
+    const [id, usuario, expires] = atob(payload).split(':');
     if (parseInt(expires) < Date.now()) return null;
     return { id: parseInt(id), usuario, expires: parseInt(expires) };
   } catch {
@@ -101,9 +154,9 @@ export default {
         if (padres?.length) {
           for (const p of padres) {
             batch.push(cleanBind(env.DB.prepare(`
-              INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            `), fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
+              INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, direccion_laboral, telefono_laboral, horarios_laborales)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            `), fichaId, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.direccion_laboral, p.telefono_laboral, p.horarios_laborales));
           }
         }
         if (hermanos?.length) {
@@ -123,25 +176,33 @@ export default {
 
         // Notificación vía Resend
         if (env.RESEND_API_KEY) {
+          console.log('DEBUG_EMAIL: RESEND_API_KEY detectada.');
           try {
             const resend = new Resend(env.RESEND_API_KEY);
-            const { data: emailRes, error: emailErr } = await resend.emails.send({
-              from: 'Inscripciones La Cecilia <onboarding@resend.dev>', // Usar dominio propio si se configura
+            await resend.emails.send({
+              from: 'Inscripciones La Cecilia <onboarding@resend.dev>',
               to: 'laceciliasecretaria@gmail.com',
-              subject: `Nueva Solicitud de Ingreso: ${ficha.apellido}, ${ficha.nombre}`,
-              text: `Se ha recibido una nueva solicitud de inscripción.\n\nAlumno: ${ficha.apellido}, ${ficha.nombre}\nNivel: ${ficha.nivel_ingreso} - ${ficha.grado_anio}\n\nPuede ver los detalles completos ingresando al panel administrativo: ${env.FRONTEND_URL}/admin`
+              subject: `Nueva Solicitud: ${ficha.apellido}, ${ficha.nombre}`,
+              text: `Nueva solicitud recibida.\nAlumno: ${ficha.apellido}, ${ficha.nombre}\nNivel: ${ficha.nivel_ingreso}\nLink: ${env.FRONTEND_URL}/admin`
             });
-            
-            if (emailErr) {
-              console.error('Error de Resend:', emailErr);
-            } else {
-              console.log('Email enviado con éxito:', emailRes?.id);
-            }
-          } catch (err: any) {
-            console.error('Error al enviar mail (excepción):', err.message);
-          }
-        } else {
-          console.warn('RESEND_API_KEY no configurada. No se enviará notificación.');
+          } catch (err: any) { console.error('Error Resend:', err.message); }
+        }
+
+        // Notificación vía Telegram
+        if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+          const text = `<b>🔔 Nueva Solicitud de Ingreso</b>\n\n` +
+                       `<b>Alumno:</b> ${ficha.apellido}, ${ficha.nombre}\n` +
+                       `<b>DNI:</b> ${ficha.dni_nro}\n` +
+                       `<b>Nivel:</b> ${ficha.nivel_ingreso} - ${ficha.grado_anio}\n\n` +
+                       `<a href="${env.FRONTEND_URL}/admin">Ver en el Panel Administrativo</a>`;
+          
+          try {
+            await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' })
+            });
+          } catch (e) { console.error('Error Telegram:', e); }
         }
 
         return jsonResponse({ success: true, id: fichaId }, 201);
@@ -151,15 +212,28 @@ export default {
       if (path.startsWith('/api/admin/')) {
         if (path === '/api/admin/login' && request.method === 'POST') {
           const { usuario, password } = await request.json() as any;
-          const user = await env.DB.prepare('SELECT * FROM usuarios WHERE usuario = ? AND password = ?')
-            .bind(usuario, password).first() as any;
+          const user = await env.DB.prepare('SELECT * FROM usuarios WHERE usuario = ?')
+            .bind(usuario).first() as any;
           
           if (!user) return jsonResponse({ error: 'Credenciales inválidas' }, 401);
           if (user.activo === 0) return jsonResponse({ error: 'Usuario inactivo' }, 403);
+
+          const isValid = await verifyPassword(password, user.password);
+          if (!isValid) {
+            // Soporte temporal para migrar contraseñas de texto plano a hash en el primer login
+            if (password === user.password) {
+              const newHash = await hashPassword(password);
+              await env.DB.prepare('UPDATE usuarios SET password = ? WHERE id = ?').bind(newHash, user.id).run();
+            } else {
+              return jsonResponse({ error: 'Credenciales inválidas' }, 401);
+            }
+          }
           
-          // Generar un token simple (Base64 de id:usuario:expiry)
+          // Generar un token firmado HMAC
           const expiry = Date.now() + (24 * 60 * 60 * 1000); // 24hs
-          const token = btoa(`${user.id}:${user.usuario}:${expiry}`);
+          const payload = btoa(`${user.id}:${user.usuario}:${expiry}`);
+          const signature = await generateSignature(payload, env.AUTH_SECRET || 'default_fallback_secret');
+          const token = `${payload}.${signature}`;
           
           return jsonResponse({ success: true, token, user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol } });
         }
@@ -260,8 +334,8 @@ export default {
             if (padres) {
               batch.push(env.DB.prepare('DELETE FROM padres_tutores WHERE ficha_id = ?').bind(id));
               padres.forEach((p: any) => {
-                batch.push(env.DB.prepare('INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, email, profesion_ocupacion, empresa_laboral, telefono_laboral, horarios_laborales) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                  .bind(id, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.email, p.profesion_ocupacion, p.empresa_laboral, p.telefono_laboral, p.horarios_laborales));
+                batch.push(env.DB.prepare('INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, email, profesion_ocupacion, empresa_laboral, direccion_laboral, telefono_laboral, horarios_laborales) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                  .bind(id, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.email, p.profesion_ocupacion, p.empresa_laboral, p.direccion_laboral, p.telefono_laboral, p.horarios_laborales));
               });
             }
 
@@ -329,7 +403,7 @@ export default {
           const id = path.split('/').filter(Boolean).pop();
           if (!id || isNaN(Number(id))) return jsonResponse({ error: 'ID inválido' }, 400);
 
-          const { fecha_hora, notas, estado, respuesta } = await request.json() as any;
+          const { fecha_hora, notas, estado, respuesta, decision_final } = await request.json() as any;
           
           if (fecha_hora) {
             const newTime = new Date(fecha_hora).getTime();
@@ -348,6 +422,15 @@ export default {
           const res = await env.DB.prepare('UPDATE entrevistas SET fecha_hora = COALESCE(?, fecha_hora), notas = COALESCE(?, notas), estado = COALESCE(?, estado), respuesta = COALESCE(?, respuesta) WHERE id = ?')
             .bind(val(fecha_hora), val(notas), val(estado), val(respuesta), id).run();
           
+          // Si hay decisión final, actualizamos la ficha del alumno
+          if (decision_final) {
+            const ent = await env.DB.prepare('SELECT ficha_id FROM entrevistas WHERE id = ?').bind(id).first() as any;
+            if (ent) {
+              await env.DB.prepare('UPDATE fichas SET decision_final = ?, estado = ? WHERE id = ?')
+                .bind(decision_final, decision_final === 'ingresa' ? 'finalizado' : 'contactado', ent.ficha_id).run();
+            }
+          }
+
           if (res.meta.changes === 0) return jsonResponse({ error: 'Entrevista no encontrada' }, 404);
           return jsonResponse({ success: true });
         }
@@ -361,8 +444,9 @@ export default {
           const { usuario, password, nombre, rol } = await request.json() as any;
           if (!usuario || !password) return jsonResponse({ error: 'Usuario y contraseña requeridos' }, 400);
           
+          const hashedPassword = await hashPassword(password);
           await env.DB.prepare('INSERT INTO usuarios (usuario, password, nombre, rol, activo) VALUES (?, ?, ?, ?, 1)')
-            .bind(usuario, password, nombre || usuario, rol || 'admin').run();
+            .bind(usuario, hashedPassword, nombre || usuario, rol || 'admin').run();
           
           await logAction(env, currentUser.id, null, 'creación_usuario', { usuario });
           return jsonResponse({ success: true });
@@ -374,7 +458,10 @@ export default {
           const keys = [];
           const values = [];
           if (usuario !== undefined) { keys.push('usuario = ?'); values.push(usuario); }
-          if (password !== undefined) { keys.push('password = ?'); values.push(password); }
+          if (password !== undefined && password !== '') { 
+            keys.push('password = ?'); 
+            values.push(await hashPassword(password)); 
+          }
           if (nombre !== undefined) { keys.push('nombre = ?'); values.push(nombre); }
           if (rol !== undefined) { keys.push('rol = ?'); values.push(rol); }
           if (activo !== undefined) { keys.push('activo = ?'); values.push(activo ? 1 : 0); }
