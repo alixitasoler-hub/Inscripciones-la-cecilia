@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Users, 
   Calendar, 
-  Search, 
-  Download, 
-  ChevronRight, 
-  Clock,
   Printer,
   MessageCircle,
   Edit3,
@@ -14,11 +9,10 @@ import {
   Plus,
   X,
   Trash2,
-  ArrowLeft,
-  AlertCircle
+  ArrowLeft
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
 
 const AdminPanel = () => {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
@@ -26,8 +20,6 @@ const AdminPanel = () => {
   const [isAuth, setIsAuth] = useState(Boolean(localStorage.getItem('adminToken')));
   const [loginForm, setLoginForm] = useState({ usuario: '', password: '' });
   const [error, setError] = useState('');
-
-  const location = useLocation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +48,24 @@ const AdminPanel = () => {
     localStorage.removeItem('adminUser');
     setToken(''); setUser(null); setIsAuth(false);
   };
+
+  useEffect(() => {
+    if (token) {
+      try {
+        const payload = token.split('.')[0];
+        const decoded = atob(payload);
+        const parts = decoded.split(':');
+        if (parts.length >= 3) {
+          const expires = parseInt(parts[2]);
+          if (expires < Date.now()) {
+            logout();
+          }
+        }
+      } catch (e) {
+        logout();
+      }
+    }
+  }, [token]);
 
   if (!isAuth) {
     return (
@@ -91,78 +101,74 @@ const AdminPanel = () => {
     );
   }
 
-  const showSidebar = !location.pathname.includes('/ficha/');
-
   return (
-    <div className={`admin-layout animate-in ${!showSidebar ? 'full-width' : ''}`} style={!showSidebar ? { gridTemplateColumns: '1fr' } : {}}>
-      {showSidebar && (
-        <aside className="sidebar no-print">
-          <div className="card sidebar-card" style={{ padding: '1.5rem' }}>
-            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                  <img src="/logo.jpg" alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border-color)' }} />
-                </div>
-                <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{user?.nombre}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{user?.usuario}</div>
-            </div>
-            <h3 style={{ marginBottom: '1rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>Módulos</h3>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <NavLink 
-                to="/admin" 
-                end
-                className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
-                style={{justifyContent: 'flex-start'}}
-              >
-                <Users size={18} /> Solicitudes
-              </NavLink>
-              <NavLink 
-                to="/admin/agenda" 
-                className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
-                style={{justifyContent: 'flex-start'}}
-              >
-                <Calendar size={18} /> Agenda
-              </NavLink>
-              <NavLink 
-                to="/admin/metricas" 
-                className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
-                style={{justifyContent: 'flex-start'}}
-              >
-                <Clock size={18} /> Métricas e Historial
-              </NavLink>
-              {(user?.rol === 'superadmin' || user?.rol === 'admin') && (
-                <NavLink 
-                  to="/admin/usuarios" 
-                  className={({ isActive }) => `btn ${isActive ? 'btn-primary' : 'btn-ghost'}`} 
-                  style={{justifyContent: 'flex-start'}}
-                >
-                  <Users size={18} /> Usuarios
-                </NavLink>
-              )}
-              
-              <div style={{ height: '1px', background: 'var(--border-color)', margin: '1rem 0' }}></div>
-              
-              <button onClick={logout} className="btn btn-ghost" style={{ justifyContent: 'flex-start', color: 'var(--error)' }}>
-                <ArrowLeft size={18} /> Cerrar Sesión
-              </button>
-            </nav>
-          </div>
-        </aside>
-      )}
-
+    <div className="admin-layout animate-in full-width">
       <main>
-        <Routes>
-          <Route path="/" element={<BandejaEntrada token={token} />} />
-          <Route path="/agenda" element={<Agenda token={token} />} />
-          <Route path="/metricas" element={<MetricasHistorial token={token} />} />
-          <Route path="/usuarios" element={<GestionUsuarios token={token} />} />
-          <Route path="/ficha/:id" element={<DetalleFicha token={token} />} />
-        </Routes>
+        <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>}>
+          <Routes>
+            <Route path="/ficha/:id" element={<DetalleFicha token={token} onAuthError={logout} />} />
+            <Route path="/*" element={<AdminPanelV2 token={token} onAuthError={logout} user={user} />} />
+          </Routes>
+        </React.Suspense>
       </main>
     </div>
   );
 };
 
-// --- COMPONENTE: MODAL DE GESTIÓN DE ENTREVISTA ---
+// Lazy imports
+const AdminPanelV2 = React.lazy(() => import('./v2/AdminPanelV2'));
+
+// --- COMPONENTES AUXILIARES ---
+
+const EditField = ({ 
+  label, 
+  name, 
+  isEditing, 
+  ficha, 
+  updateFicha, 
+  type = 'text', 
+  full = false, 
+  options = null 
+}: { 
+  label: string, 
+  name: string, 
+  isEditing: boolean, 
+  ficha: any, 
+  updateFicha: (n: string, v: any) => void,
+  type?: string, 
+  full?: boolean, 
+  options?: {v:any, l:string}[] | null 
+}) => {
+  const val = ficha[name];
+  if (!isEditing) {
+    let displayVal = val;
+    if (type === 'date' && val) displayVal = val;
+    if (options) displayVal = options.find(o => o.v == val)?.l || val;
+    if (name === 'posee_discapacidad' || name === 'tiene_cud' || name === 'repitente') displayVal = val ? 'SÍ' : 'NO';
+    
+    return (
+      <div className={full ? 'full-print' : ''}>
+        <strong>{label}:</strong> {displayVal || '-'}
+      </div>
+    );
+  }
+
+  return (
+    <div className={full ? 'full-print' : ''} style={{ marginBottom: '0.5rem' }}>
+      <label className="form-label" style={{ fontSize: '0.7rem', marginBottom: '0.1rem' }}>{label}</label>
+      {options ? (
+        <select name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-select" style={{ padding: '0.25rem' }}>
+          <option value="">Seleccionar...</option>
+          {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        </select>
+      ) : type === 'textarea' ? (
+        <textarea name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-textarea" style={{ padding: '0.25rem', minHeight: '60px' }} />
+      ) : (
+        <input type={type} name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-input" style={{ padding: '0.25rem' }} />
+      )}
+    </div>
+  );
+};
 
 const GestionarEntrevistaModal = ({ 
   entrevista, 
@@ -318,278 +324,7 @@ const GestionarEntrevistaModal = ({
   );
 };
 
-// --- COMPONENTES ADMIN ---
-
-const BandejaEntrada = ({ token }: { token: string }) => {
-  const [fichas, setFichas] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filterLevel, setFilterLevel] = useState('');
-  const [filterStatus, setFilterStatus] = useState('activos');
-  const [filterResult, setFilterResult] = useState('');
-  const [filterDates, setFilterDates] = useState({ from: '', to: '' });
-  const [confirmStateChange, setConfirmStateChange] = useState<{id: number, newState: string} | null>(null);
-  
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    fetch(`${API_URL}/admin/fichas`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(data => {
-        setFichas(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [token]);
-
-  const filteredFichas = useMemo(() => {
-    return fichas.filter(f => {
-      const matchSearch = (f.apellido + ' ' + f.nombre + ' ' + f.dni_nro).toLowerCase().includes(search.toLowerCase());
-      const matchLevel = filterLevel ? f.nivel_ingreso === filterLevel : true;
-      const matchStatus = filterStatus ? (
-        filterStatus === 'activos' 
-          ? !['finalizado', 'cancelado'].includes(f.estado) 
-          : f.estado === filterStatus
-      ) : true;
-      const matchResult = filterResult ? f.decision_final === filterResult : true;
-      const matchDateFrom = filterDates.from ? f.fecha_solicitud >= filterDates.from : true;
-      const matchDateTo = filterDates.to ? f.fecha_solicitud <= (filterDates.to + 'T23:59:59') : true;
-      
-      return matchSearch && matchLevel && matchStatus && matchResult && matchDateFrom && matchDateTo;
-    });
-  }, [fichas, search, filterLevel, filterStatus, filterResult, filterDates]);
-
-  const exportToCSV = () => {
-    if (filteredFichas.length === 0) return;
-    
-    const headers = ["ID", "Fecha_Solicitud", "Apellido", "Nombre", "DNI", "Nivel", "Grado", "Estado", "Decision_Final"];
-    const rows = filteredFichas.map(f => [
-      f.id,
-      new Date(f.fecha_solicitud).toLocaleDateString(),
-      f.apellido,
-      f.nombre,
-      f.dni_nro,
-      f.nivel_ingreso,
-      f.grado_anio,
-      f.estado,
-      f.decision_final || '-'
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `inscripciones_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  return (
-    <div className="animate-in">
-      <div className="flex justify-between items-center mb-4">
-        <h1>Bandeja de Entrada</h1>
-        <button onClick={exportToCSV} className="btn btn-outline" disabled={filteredFichas.length === 0}>
-          <Download size={18} /> Exportar CSV
-        </button>
-      </div>
-
-      <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <div className="flex gap-4" style={{ flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Buscar por nombre, apellido o DNI..." 
-              style={{ paddingLeft: '2.75rem' }}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <select className="form-select" style={{ width: 'auto', minWidth: '180px' }} value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
-            <option value="">Todos los Niveles</option>
-            <option value="Nivel Inicial">Nivel Inicial</option>
-            <option value="EPO (Primaria)">EPO (Primaria)</option>
-            <option value="ESO (Secundaria)">ESO (Secundaria)</option>
-          </select>
-          <select className="form-select" style={{ width: 'auto', minWidth: '180px' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">Todos los Estados</option>
-            <option value="activos">Solo Activos (Pendientes)</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="contactado">Contactado</option>
-            <option value="entrevista_programada">Entrevista</option>
-            <option value="finalizado">Finalizado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-          <select className="form-select" style={{ width: 'auto', minWidth: '150px' }} value={filterResult} onChange={e => setFilterResult(e.target.value)}>
-            <option value="">Resultado...</option>
-            <option value="ingresa">Ingresa</option>
-            <option value="no_ingresa">No Ingresa</option>
-            <option value="espera">En Espera</option>
-          </select>
-          <div className="flex gap-2 items-center">
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Desde:</span>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={filterDates.from} onChange={e => setFilterDates({...filterDates, from: e.target.value})} />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hasta:</span>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={filterDates.to} onChange={e => setFilterDates({...filterDates, to: e.target.value})} />
-          </div>
-        </div>
-      </div>
-
-      <div className="admin-table-container">
-        {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>Cargando solicitudes...</div>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Alumno</th>
-                <th>Nivel / Año</th>
-                <th>Contacto para Entrevista</th>
-                <th>Estado</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFichas.map(f => (
-                <tr key={f.id}>
-                  <td>{new Date(f.fecha_solicitud).toLocaleDateString()}</td>
-                  <td style={{ fontWeight: 600 }}>{f.apellido}, {f.nombre} <br/> <small style={{color:'var(--text-muted)', fontWeight:400}}>DNI: {f.dni_nro}</small></td>
-                  <td>{f.nivel_ingreso} <br/> <small style={{color:'var(--text-muted)'}}>{f.grado_anio}</small></td>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{f.contacto_entrevista_nombre || '-'}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{f.contacto_entrevista_medio}: {f.contacto_entrevista_dato || '-'}</div>
-                  </td>
-                  <td>
-                    <select 
-                      className={`form-select badge badge-${f.estado}`} 
-                      style={{ padding: '0.25rem 1.5rem 0.25rem 0.5rem', appearance: 'auto', border: '1px solid transparent', cursor: 'pointer', outline: 'none', width: '130px' }} 
-                      value={f.estado} 
-                      onChange={e => setConfirmStateChange({ id: f.id, newState: e.target.value })}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="contactado">Contactado</option>
-                      <option value="entrevista_programada">Entrevista</option>
-                      <option value="finalizado">Finalizado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
-                  </td>
-                  <td>
-                    <div className="flex gap-2">
-                      <button className="btn btn-ghost" style={{ padding: '0.5rem', color: '#25D366' }} title="WhatsApp" onClick={() => window.open(`https://wa.me/${(f.contacto_entrevista_dato||'').replace(/\D/g,'')}?text=Hola ${f.contacto_entrevista_nombre}, nos comunicamos de La Cecilia...`, '_blank')}>
-                        <MessageCircle size={18} />
-                      </button>
-                      <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.8125rem' }} onClick={() => navigate(`/admin/ficha/${f.id}`)}>
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredFichas.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No se encontraron solicitudes.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {confirmStateChange && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div className="card animate-in" style={{ padding: '2.5rem', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-            <AlertCircle size={48} color="var(--warning)" style={{ margin: '0 auto 1.5rem' }} />
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>¿Cambiar Estado?</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-              Estás a punto de cambiar el estado de la ficha a <strong style={{color: 'var(--primary)'}}>{confirmStateChange.newState.replace('_', ' ').toUpperCase()}</strong>.
-            </p>
-            <div className="flex justify-center gap-4">
-              <button className="btn btn-outline" onClick={() => setConfirmStateChange(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={async () => {
-                setLoading(true);
-                try {
-                  await fetch(`${API_URL}/admin/fichas/${confirmStateChange.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ estado: confirmStateChange.newState })
-                  });
-                  const res = await fetch(`${API_URL}/admin/fichas`, { headers: { 'Authorization': `Bearer ${token}` } });
-                  const data = await res.json();
-                  setFichas(data);
-                } catch (e) {
-                  alert('Error al cambiar estado');
-                } finally {
-                  setConfirmStateChange(null);
-                  setLoading(false);
-                }
-              }}>Sí, cambiar</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const EditField = ({ 
-  label, 
-  name, 
-  isEditing, 
-  ficha, 
-  updateFicha, 
-  type = 'text', 
-  full = false, 
-  options = null 
-}: { 
-  label: string, 
-  name: string, 
-  isEditing: boolean, 
-  ficha: any, 
-  updateFicha: (n: string, v: any) => void,
-  type?: string, 
-  full?: boolean, 
-  options?: {v:any, l:string}[] | null 
-}) => {
-  const val = ficha[name];
-  if (!isEditing) {
-    let displayVal = val;
-    if (type === 'date' && val) displayVal = val;
-    if (options) displayVal = options.find(o => o.v == val)?.l || val;
-    if (name === 'posee_discapacidad' || name === 'tiene_cud' || name === 'repitente') displayVal = val ? 'SÍ' : 'NO';
-    
-    return (
-      <div className={full ? 'full-print' : ''}>
-        <strong>{label}:</strong> {displayVal || '-'}
-      </div>
-    );
-  }
-
-  return (
-    <div className={full ? 'full-print' : ''} style={{ marginBottom: '0.5rem' }}>
-      <label className="form-label" style={{ fontSize: '0.7rem', marginBottom: '0.1rem' }}>{label}</label>
-      {options ? (
-        <select name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-select" style={{ padding: '0.25rem' }}>
-          <option value="">Seleccionar...</option>
-          {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-        </select>
-      ) : type === 'textarea' ? (
-        <textarea name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-textarea" style={{ padding: '0.25rem', minHeight: '60px' }} />
-      ) : (
-        <input type={type} name={name} value={val || ''} onChange={e => updateFicha(name, e.target.value)} className="form-input" style={{ padding: '0.25rem' }} />
-      )}
-    </div>
-  );
-};
-
-const DetalleFicha = ({ token }: { token: string }) => {
+const DetalleFicha = ({ token, onAuthError }: { token: string, onAuthError: () => void }) => {
   const [data, setData] = useState<any>(null);
   const [agendaDate, setAgendaDate] = useState('');
   const [agendaNotes, setAgendaNotes] = useState('');
@@ -599,8 +334,7 @@ const DetalleFicha = ({ token }: { token: string }) => {
   const [entrevistas, setEntrevistas] = useState<any[]>([]);
   const [selectedEntrevista, setSelectedEntrevista] = useState<any | null>(null);
   
-  const location = useLocation();
-  const id = location.pathname.split('/').pop();
+  const id = useLocation().pathname.split('/').pop();
   const navigate = useNavigate();
 
   const ORDEN_ESCOLARIDAD = [
@@ -611,15 +345,23 @@ const DetalleFicha = ({ token }: { token: string }) => {
 
   const load = () => {
     fetch(`${API_URL}/admin/fichas/${id}`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json()).then(res => {
+      .then(res => {
+        if (res.status === 401) { onAuthError(); throw new Error('No autorizado'); }
+        return res.json();
+      })
+      .then(res => {
+        if (res.error) throw new Error(res.error);
         setData(res);
-        // Aseguramos que escolaridad tenga los 15 niveles
         const fullEscolaridad = ORDEN_ESCOLARIDAD.map(nivel => {
-          const existing = res.escolaridad.find((e: any) => e.nivel === nivel);
+          const existing = res.escolaridad?.find((e: any) => e.nivel === nivel);
           return existing || { nivel, escuela: '', anio_cursado: '', observaciones: '' };
         });
         setTempData({ ...res, escolaridad: fullEscolaridad });
         setEntrevistas(res.entrevistas || []);
+      })
+      .catch(e => {
+        console.error('Error loading ficha:', e);
+        if (e.message !== 'No autorizado') alert('Error al cargar la ficha');
       });
   }
 
@@ -708,12 +450,21 @@ const DetalleFicha = ({ token }: { token: string }) => {
     });
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isEditing && JSON.stringify(tempData) !== JSON.stringify(data)) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEditing, tempData, data]);
+
   if (!data || !tempData) return <div style={{ padding: '4rem', textAlign: 'center' }}>Cargando detalles...</div>;
 
-  const { ficha, escolaridad, padres, hermanos, convivientes } = isEditing ? tempData : data;
+  const { ficha, escolaridad, padres } = isEditing ? tempData : data;
   const isWhatsApp = ficha.contacto_entrevista_medio === 'WhatsApp';
-  
-  // Buscar la próxima entrevista programada para el mensaje de WA
   const proximas = entrevistas.filter((e: any) => e.estado === 'programada' || e.estado === 'movida');
   const proxima = proximas.length > 0 ? proximas[0] : null;
   
@@ -727,14 +478,9 @@ const DetalleFicha = ({ token }: { token: string }) => {
   }
 
   const alumno = `${ficha.nombre} ${ficha.apellido}`;
-  const mensajeWA = `¡Hola!
-Hemos recibido la solicitud de inscripción de ${alumno}. Te proponemos realizar la entrevista el día ${fechaStr} a las ${horaStr}.
-Te pedimos confirmar la disponibilidad para ese horario. 
-En caso de no poder asistir, agradeceremos que nos avises con anticipación por este mismo medio.
-Muchas gracias.`;
+  const mensajeWA = `¡Hola!\nHemos recibido la solicitud de inscripción de ${alumno}. Te proponemos realizar la entrevista el día ${fechaStr} a las ${horaStr}.\nTe pedimos confirmar la disponibilidad para ese horario. \nEn caso de no poder asistir, agradeceremos que nos avises con anticipación por este mismo medio.\nMuchas gracias.`;
 
   const waLink = isWhatsApp ? `https://wa.me/${ficha.contacto_entrevista_dato?.replace(/\D/g,'')}?text=${encodeURIComponent(mensajeWA)}` : null;
-
 
   return (
     <div className="animate-in">
@@ -779,8 +525,8 @@ Muchas gracias.`;
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <EditField label="Estado" name="estado" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'pendiente', l:'PENDIENTE'}, {v:'contactado', l:'CONTACTADO'}, {v:'entrevista_programada', l:'ENTREVISTA'}, {v:'finalizado', l:'FINALIZADO'}, {v:'cancelado', l:'CANCELADO'}]} />
-            <p style={{ fontSize: '0.8rem' }}>Solicitud: {new Date(ficha.fecha_solicitud).toLocaleDateString('es-AR')}</p>
+            <EditField label="Estado" name="estado" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'pendiente', l:'PENDIENTE'}, {v:'leida', l:'LEÍDA'}, {v:'contactado', l:'CONTACTADO'}, {v:'entrevistado', l:'ENTREVISTADO'}, {v:'admitido', l:'ADMITIDO'}, {v:'finalizado', l:'FINALIZADO'}, {v:'cancelado', l:'CANCELADO'}]} />
+            <p style={{ fontSize: '0.8rem' }}>Solicitud: {new Date(ficha.fecha_solicitud || ficha.created_at).toLocaleDateString('es-AR')}</p>
           </div>
         </header>
 
@@ -808,7 +554,7 @@ Muchas gracias.`;
         </section>
 
         <section className="section-print" style={{ border: '2px solid var(--accent)', background: 'var(--accent-soft)' }}>
-          <h3 className="section-title-print" style={{ background: 'var(--accent) !important' }}>Contacto para Entrevista (Coordinación)</h3>
+          <h3 className="section-title-print" style={{ background: 'var(--accent) !important' }}>Contacto para Entrevista</h3>
           <div className="grid-print">
             <EditField label="Nombre de Contacto" name="contacto_entrevista_nombre" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
             <EditField label="Medio de Contacto" name="contacto_entrevista_medio" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'WhatsApp', l:'WhatsApp'}, {v:'Teléfono', l:'Teléfono'}, {v:'Email', l:'Email'}]} />
@@ -823,7 +569,7 @@ Muchas gracias.`;
             <EditField label="Embarazo/Parto" name="embarazo_parto" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
             <EditField label="Obra Social" name="obra_social" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} />
             <EditField label="¿Tiene Discapacidad?" name="posee_discapacidad" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
-            {(isEditing ? ficha?.posee_discapacidad : data.ficha.posee_discapacidad) && (
+            {ficha?.posee_discapacidad && (
               <>
                 <EditField label="Especif. Discapacidad" name="discapacidad" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} full />
                 <EditField label="¿Tiene CUD?" name="tiene_cud" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:1, l:'SÍ'}, {v:0, l:'NO'}]} />
@@ -842,21 +588,9 @@ Muchas gracias.`;
               {escolaridad.map((e: any, i: number) => (
                 <tr key={i}>
                   <td><strong>{e.nivel}</strong></td>
-                  <td>
-                    {isEditing ? (
-                      <input value={e.escuela || ''} onChange={v => updateArrayItem('escolaridad', i, 'escuela', v.target.value)} />
-                    ) : (e.escuela || '-')}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input value={e.anio_cursado || ''} onChange={v => updateArrayItem('escolaridad', i, 'anio_cursado', v.target.value)} />
-                    ) : (e.anio_cursado || '-')}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input value={e.observaciones || ''} onChange={v => updateArrayItem('escolaridad', i, 'observaciones', v.target.value)} />
-                    ) : (e.observaciones || '-')}
-                  </td>
+                  <td>{isEditing ? <input value={e.escuela || ''} onChange={v => updateArrayItem('escolaridad', i, 'escuela', v.target.value)} /> : (e.escuela || '-')}</td>
+                  <td>{isEditing ? <input value={e.anio_cursado || ''} onChange={v => updateArrayItem('escolaridad', i, 'anio_cursado', v.target.value)} /> : (e.anio_cursado || '-')}</td>
+                  <td>{isEditing ? <input value={e.observaciones || ''} onChange={v => updateArrayItem('escolaridad', i, 'observaciones', v.target.value)} /> : (e.observaciones || '-')}</td>
                 </tr>
               ))}
             </tbody>
@@ -867,7 +601,7 @@ Muchas gracias.`;
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1C3F60', color: 'white', padding: '0.4rem 1rem' }}>
             <h3 style={{ margin: 0, textTransform: 'uppercase', fontSize: '9pt', fontWeight: 800 }}>Responsables y Tutores</h3>
             {isEditing && (
-              <button className="btn btn-ghost no-print" style={{ color: 'white', padding: '0.2rem' }} onClick={() => addArrayItem('padres', { rol: '', apellido: '', nombre: '', dni_nro: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '' })}>
+              <button className="btn btn-ghost no-print" style={{ color: 'white', padding: '0.2rem' }} onClick={() => addArrayItem('padres', { rol: '', apellido: '', nombre: '', dni_nro: '', celular: '', email: '' })}>
                 <Plus size={16} /> Agregar
               </button>
             )}
@@ -875,44 +609,24 @@ Muchas gracias.`;
           {padres.map((p: any, i: number) => (
             <div key={i} style={{ borderTop: i > 0 ? '1px solid #e2e8f0' : 'none', padding: '1rem' }}>
               <div className="grid-print">
-                <div className="full-print" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  {isEditing ? (
-                    <select value={p.rol || ''} onChange={v => updateArrayItem('padres', i, 'rol', v.target.value)} style={{ fontWeight: 800, color: 'var(--primary)', border: 'none', background: 'transparent' }}>
-                      <option value="">Vínculo...</option>
-                      <option value="Madre">Madre</option>
-                      <option value="Padre">Padre</option>
-                      <option value="Tutor/a">Tutor/a</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  ) : <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{p.rol?.toUpperCase()}</span>}
+                <div className="full-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{p.rol?.toUpperCase() || 'RESPONSABLE'}</span>
                   {isEditing && <button className="btn btn-ghost no-print" style={{ color: 'var(--error)' }} onClick={() => removeArrayItem('padres', i)}><Trash2 size={16} /></button>}
                 </div>
-                {/* Campos de Responsable */}
                 {isEditing ? (
                   <>
+                    <div className="form-group"><label className="form-label">Rol</label><input value={p.rol || ''} onChange={v => updateArrayItem('padres', i, 'rol', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Apellido</label><input value={p.apellido || ''} onChange={v => updateArrayItem('padres', i, 'apellido', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Nombre</label><input value={p.nombre || ''} onChange={v => updateArrayItem('padres', i, 'nombre', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">DNI</label><input value={p.dni_nro || ''} onChange={v => updateArrayItem('padres', i, 'dni_nro', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Celular</label><input value={p.celular || ''} onChange={v => updateArrayItem('padres', i, 'celular', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Tel. Casa</label><input value={p.telefono_casa || ''} onChange={v => updateArrayItem('padres', i, 'telefono_casa', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Email</label><input value={p.email || ''} onChange={v => updateArrayItem('padres', i, 'email', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">F. Nacimiento</label><input value={p.fecha_nac || ''} onChange={v => updateArrayItem('padres', i, 'fecha_nac', v.target.value)} /></div>
-                    <div className="form-group full-print"><label className="form-label">Dirección</label><input value={p.direccion || ''} onChange={v => updateArrayItem('padres', i, 'direccion', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Localidad</label><input value={p.localidad || ''} onChange={v => updateArrayItem('padres', i, 'localidad', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Ocupación</label><input value={p.profesion_ocupacion || ''} onChange={v => updateArrayItem('padres', i, 'profesion_ocupacion', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Lugar de Trabajo</label><input value={p.empresa_laboral || ''} onChange={v => updateArrayItem('padres', i, 'empresa_laboral', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Ubicación Trabajo</label><input value={p.direccion_laboral || ''} onChange={v => updateArrayItem('padres', i, 'direccion_laboral', v.target.value)} /></div>
-                    <div className="form-group"><label className="form-label">Horario Laboral</label><input value={p.horarios_laborales || ''} onChange={v => updateArrayItem('padres', i, 'horarios_laborales', v.target.value)} /></div>
                   </>
                 ) : (
                   <>
                     <div><strong>Nombre:</strong> {p.apellido}, {p.nombre}</div>
                     <div><strong>DNI:</strong> {p.dni_nro}</div>
-                    <div><strong>F. Nacimiento:</strong> {p.fecha_nac || '-'}</div>
                     <div><strong>Contacto:</strong> {p.celular} / {p.telefono_casa}</div>
                     <div><strong>Email:</strong> {p.email}</div>
-                    <div className="full-print"><strong>Domicilio:</strong> {p.direccion}, {p.localidad}</div>
-                    <div className="full-print"><strong>Laboral:</strong> {p.profesion_ocupacion} en {p.empresa_laboral || '-'} ({p.direccion_laboral || '-'}) - {p.horarios_laborales || '-'}</div>
                   </>
                 )}
               </div>
@@ -920,58 +634,25 @@ Muchas gracias.`;
           ))}
         </section>
 
-        <section className="section-print">
-          <h3 className="section-title-print">Antecedentes y Motivación</h3>
-          <div className="grid-print">
-            <EditField label="Motivo Elección" name="motivo_eleccion" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
-            <EditField label="Socioeconómico" name="situacion_socioeconomica" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} options={[{v:'Muy buena', l:'Muy buena'}, {v:'Buena', l:'Buena'}, {v:'Regular', l:'Regular'}, {v:'Mala', l:'Mala'}]} />
-            <EditField label="Otros Datos" name="otros_datos" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
-            <EditField label="Prob. Aprendizaje" name="problemas_aprendizaje" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
-            <EditField label="Otras Actividades" name="otras_actividades" isEditing={isEditing} ficha={ficha} updateFicha={updateFicha} type="textarea" full />
-          </div>
-        </section>
-
-        <section className="section-print">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1C3F60', color: 'white', padding: '0.4rem 1rem' }}>
-            <h3 style={{ margin: 0, textTransform: 'uppercase', fontSize: '9pt', fontWeight: 800 }}>Grupo Familiar y Otros Convivientes</h3>
-            {isEditing && (
-              <button className="btn btn-ghost no-print" style={{ color: 'white', padding: '0.2rem' }} onClick={() => addArrayItem('hermanos', { vinculo: '', nombre_apellido: '', dni_nro: '', fecha_nac: '', estudios_escuela: '' })}>
-                <Plus size={16} /> Agregar
-              </button>
-            )}
-          </div>
-          <table className="admin-edit-table">
-            <thead>
-              <tr><th>Vínculo</th><th>Nombre</th><th>DNI / Edad</th><th>Escuela / Ocupación</th><th className="no-print"></th></tr>
-            </thead>
-            <tbody>
-              {hermanos.map((h: any, i: number) => (
-                <tr key={i}>
-                  <td>{isEditing ? <input value={h.vinculo || ''} onChange={v => updateArrayItem('hermanos', i, 'vinculo', v.target.value)} /> : h.vinculo}</td>
-                  <td>{isEditing ? <input value={h.nombre_apellido || ''} onChange={v => updateArrayItem('hermanos', i, 'nombre_apellido', v.target.value)} /> : h.nombre_apellido}</td>
-                  <td>{isEditing ? <input value={h.dni_nro || h.fecha_nac || ''} onChange={v => updateArrayItem('hermanos', i, 'dni_nro', v.target.value)} /> : (h.dni_nro || h.fecha_nac)}</td>
-                  <td>{isEditing ? <input value={h.estudios_escuela || ''} onChange={v => updateArrayItem('hermanos', i, 'estudios_escuela', v.target.value)} /> : h.estudios_escuela}</td>
-                  <td className="no-print">{isEditing && <button className="btn btn-ghost" style={{ color: 'var(--error)' }} onClick={() => removeArrayItem('hermanos', i)}><Trash2 size={16} /></button>}</td>
-                </tr>
-              ))}
-              {convivientes.map((c: any, i: number) => (
-                <tr key={`c-${i}`}>
-                  <td>{isEditing ? <input value={c.vinculo || ''} onChange={v => updateArrayItem('convivientes', i, 'vinculo', v.target.value)} /> : c.vinculo}</td>
-                  <td>{isEditing ? <input value={c.nombre_apellido || ''} onChange={v => updateArrayItem('convivientes', i, 'nombre_apellido', v.target.value)} /> : c.nombre_apellido}</td>
-                  <td>{isEditing ? <input value={c.edad || ''} onChange={v => updateArrayItem('convivientes', i, 'edad', v.target.value)} /> : `${c.edad} años`}</td>
-                  <td>{isEditing ? <input value={c.observaciones || ''} onChange={v => updateArrayItem('convivientes', i, 'observaciones', v.target.value)} /> : c.observaciones}</td>
-                  <td className="no-print">{isEditing && <button className="btn btn-ghost" style={{ color: 'var(--error)' }} onClick={() => removeArrayItem('convivientes', i)}><Trash2 size={16} /></button>}</td>
-                </tr>
-              ))}
-              {hermanos.length === 0 && convivientes.length === 0 && <tr><td colSpan={5} style={{textAlign:'center'}}>No se registraron otros familiares.</td></tr>}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="section-print no-print" style={{ background: '#FEF9C3', marginBottom: '4rem' }}>
-          <h3 className="section-title-print">Notas Administrativas (Privado)</h3>
-          <div style={{ padding: '1rem' }}>
-            <textarea className="form-textarea" style={{ background: 'transparent', border: 'none', minHeight: '100px' }} value={ficha.observaciones_generales || ''} onChange={e => updateFicha('observaciones_generales', e.target.value)} />
+        <section className="section-print" style={{ pageBreakBefore: 'always' }}>
+          <h2 style={{ textAlign: 'center', color: '#1C3F60', marginBottom: '2rem', fontSize: '14pt', fontWeight: 800, textTransform: 'uppercase' }}>Acuerdo de Admisión y Permanencia</h2>
+          <div style={{ padding: '0.5rem', fontSize: '8.5pt', lineHeight: '1.4', textAlign: 'justify' }}>
+             <p style={{ marginBottom: '1rem' }}>
+              Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción...
+            </p>
+            <div style={{ marginTop: '3rem' }}>
+              <p style={{ marginBottom: '3rem', fontWeight: 800 }}>NOTIFICACIÓN Y ACUERDO DEL ALUMNO Y LOS PADRES</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
+                <div>
+                  <div style={{ width: '100%', borderTop: '1px solid #1e293b', marginBottom: '0.5rem' }}></div>
+                  <div style={{ fontWeight: 800, fontSize: '9pt' }}>ALUMNO (firma y aclaración):</div>
+                </div>
+                <div>
+                  <div style={{ width: '100%', borderTop: '1px solid #1e293b', marginBottom: '0.5rem' }}></div>
+                  <div style={{ fontWeight: 800, fontSize: '9pt' }}>PADRES (firma y aclaración):</div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -995,12 +676,6 @@ Muchas gracias.`;
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{new Date(ev.fecha_hora).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}hs</div>
                     <div className={`badge badge-${ev.estado}`} style={{ marginTop: '0.4rem' }}>{ev.estado}</div>
-                    
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Contacto para cita:</div>
-                      <div style={{ fontWeight: 700 }}>{ficha.contacto_entrevista_nombre}</div>
-                      <div style={{ fontSize: '0.85rem' }}>{ficha.contacto_entrevista_medio}: {ficha.contacto_entrevista_dato}</div>
-                    </div>
                   </div>
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary" style={{ padding: '0.5rem' }} onClick={() => setSelectedEntrevista(ev)} title="Gestionar"><Edit3 size={18} /></button>
@@ -1009,7 +684,6 @@ Muchas gracias.`;
                 </div>
               </div>
             ))}
-            {entrevistas.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', gridColumn: '1/-1' }}>Sin entrevistas programadas.</div>}
           </div>
         </div>
       </section>
@@ -1020,396 +694,5 @@ Muchas gracias.`;
     </div>
   );
 }
-
-const Agenda = ({ token }: { token: string }) => {
-  const [entrevistas, setEntrevistas] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'proximas' | 'realizadas' | 'canceladas'>('proximas');
-  const [selectedEntrevista, setSelectedEntrevista] = useState<any | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const cargar = () => {
-    setLoading(true);
-    fetch(`${API_URL}/admin/agenda`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(data => { setEntrevistas(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => { cargar(); }, [token]);
-
-  const handleBorrarEntrevista = async (id: number) => {
-    if (!confirm('¿Eliminar entrevista?')) return;
-    setSaving(true);
-    try {
-      await fetch(`${API_URL}/admin/entrevistas/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      cargar();
-    } catch (e: any) { alert('Error'); }
-    finally { setSaving(false); }
-  };
-
-  const proximas = entrevistas.filter(e => e.estado === 'programada' || e.estado === 'movida');
-  const realizadas = entrevistas.filter(e => e.estado === 'realizada');
-  const canceladas = entrevistas.filter(e => e.estado === 'cancelada');
-
-  const TABS = [
-    { key: 'proximas' as const, label: 'Próximas', count: proximas.length },
-    { key: 'realizadas' as const, label: 'Realizadas', count: realizadas.length },
-    { key: 'canceladas' as const, label: 'Canceladas', count: canceladas.length },
-  ];
-
-  const groupByDay = (list: any[]) => {
-    const groups: { [day: string]: any[] } = {};
-    for (const e of list) {
-      const day = new Date(e.fecha_hora).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      if (!groups[day]) groups[day] = [];
-      groups[day].push(e);
-    }
-    return groups;
-  };
-
-  const currentList = activeTab === 'proximas' ? proximas : (activeTab === 'realizadas' ? realizadas : canceladas);
-  const grupos = groupByDay(currentList);
-
-  return (
-    <div className="animate-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1>Agenda de Entrevistas</h1>
-        <button className="btn btn-outline" onClick={cargar} disabled={loading}><Clock size={16} /> Actualizar</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '2rem', background: '#f8fafc', padding: '0.35rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', width: 'fit-content' }}>
-        {TABS.map(tab => (
-          <button key={tab.key} className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab(tab.key)}>
-            {tab.label} {tab.count > 0 && <span style={{ marginLeft: '0.4rem', background: activeTab === tab.key ? 'rgba(255,255,255,0.25)' : 'var(--accent-soft)', color: activeTab === tab.key ? 'white' : 'var(--accent)', borderRadius: '999px', padding: '0 0.45rem', fontSize: '0.75rem', fontWeight: 800 }}>{tab.count}</span>}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando agenda...</div>
-      ) : currentList.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No hay entrevistas en esta categoría.</div>
-      ) : (
-        Object.entries(grupos).map(([dia, items]) => (
-          <div key={dia} style={{ marginBottom: '2.5rem' }}>
-            <div className="timeline-day" style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', fontWeight: 800, marginBottom: '1rem', fontSize: '0.9rem', textTransform: 'capitalize' }}>{dia}</div>
-            <div className="admin-table-container" style={{ boxShadow: 'none', border: '1px solid var(--border-color)' }}>
-              <table className="admin-table">
-                <thead>
-                  <tr style={{background: '#f8fafc'}}>
-                    <th style={{width: '100px'}}>Hora</th>
-                    <th>Alumno / Nivel</th>
-                    <th>Contacto</th>
-                    <th>Estado / Rta</th>
-                    <th style={{textAlign: 'right'}}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((e: any) => (
-                    <tr key={e.id}>
-                      <td>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
-                          {new Date(e.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 700 }}>{e.alumno_apellido}, {e.alumno_nombre}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{e.nivel_ingreso} - {e.grado_anio}</div>
-                      </td>
-                      <td>
-                        <div style={{ fontSize: '0.85rem' }}><strong>{e.contacto_entrevista_nombre}</strong></div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{e.contacto_entrevista_medio}: {e.contacto_entrevista_dato}</div>
-                      </td>
-                      <td>
-                        <span className={`badge badge-${e.estado}`} style={{fontSize: '0.7rem'}}>{e.estado}</span>
-                        {e.respuesta && <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '0.2rem', fontWeight: 600 }}>💬 {e.respuesta}</div>}
-                        {e.decision_final && <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.2rem' }}>RESULTADO: {e.decision_final.toUpperCase()}</div>}
-                      </td>
-                      <td>
-                        <div className="flex justify-end gap-1">
-                          <button className="btn btn-primary btn-sm" onClick={() => setSelectedEntrevista(e)} title="Gestionar"><Edit3 size={14} /></button>
-                          <Link to={`/admin/ficha/${e.ficha_id}`} className="btn btn-outline btn-sm" title="Ver Ficha"><ChevronRight size={14} /></Link>
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--error)' }} onClick={() => handleBorrarEntrevista(e.id)} disabled={saving} title="Borrar"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))
-      )}
-
-      {selectedEntrevista && (
-        <GestionarEntrevistaModal entrevista={selectedEntrevista} token={token} onClose={() => setSelectedEntrevista(null)} onUpdate={cargar} />
-      )}
-    </div>
-  );
-}
-
-const MetricasHistorial = ({ token }: { token: string }) => {
-  const [data, setData] = useState<{stats: any[], history: any[]}>({ stats: [], history: [] });
-  const [, setLoading] = useState(true);
-  const [dates, setDates] = useState({ 
-    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], 
-    to: new Date().toISOString().split('T')[0] 
-  });
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/admin/metrics?from=${dates.from}&to=${dates.to}T23:59:59`, { 
-        headers: { 'Authorization': `Bearer ${token}` } 
-      });
-      const resData = await res.json();
-      setData(resData);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, [token, dates]);
-
-  return (
-    <div className="animate-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1>Métricas e Historial</h1>
-        <div className="flex gap-4 items-center bg-white p-2 rounded-lg border border-gray-200">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase">Desde</span>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={dates.from} onChange={e => setDates({...dates, from: e.target.value})} />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase">Hasta</span>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '0.4rem' }} value={dates.to} onChange={e => setDates({...dates, to: e.target.value})} />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-        {['Nivel Inicial', 'EPO (Primaria)', 'ESO (Secundaria)'].map(nivel => {
-          const stat = data.stats?.find((s: any) => s.nivel_ingreso === nivel) || { total: 0, concretados: 0 };
-          return (
-            <div key={nivel} className="card" style={{ padding: '1.5rem', borderTop: '4px solid var(--primary)' }}>
-              <h3 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{nivel}</h3>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{stat.total}</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: '0.5rem' }}>SOLICITUDES</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>{stat.concretados}</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>INGRESOS</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="card">
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem' }}><Clock size={20} /> Historial de Cambios</h2>
-          <button className="btn btn-ghost btn-sm" onClick={load}><Clock size={16} /> Actualizar</button>
-        </div>
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Fecha/Hora</th>
-                <th>Usuario</th>
-                <th>Acción</th>
-                <th>Ficha / Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.history?.map((h: any) => (
-                <tr key={h.id}>
-                  <td style={{ fontSize: '0.8rem' }}>{new Date(h.fecha).toLocaleString()}</td>
-                  <td style={{ fontWeight: 600 }}>{h.usuario_nombre}</td>
-                  <td>
-                    <span className={`badge badge-${h.accion === 'edición' ? 'contactado' : (h.accion === 'borrado' ? 'cancelada' : 'pendiente')}`}>
-                      {h.accion}
-                    </span>
-                  </td>
-                  <td>
-                    {h.ficha_nombre ? (
-                      <Link to={`/admin/ficha/${h.ficha_id}`} style={{ fontWeight: 600, color: 'var(--primary)' }}>
-                        {h.ficha_nombre}
-                      </Link>
-                    ) : '-'}
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      {h.detalles}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {data.history?.length === 0 && (
-                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No hay actividad registrada.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const GestionUsuarios = ({ token }: { token: string }) => {
-  const [usuarios, setUsuarios] = useState<any[]>([]);
-  const [, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ usuario: '', password: '', nombre: '', rol: 'admin' });
-
-  const cargar = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/admin/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
-      const data = await res.json();
-      setUsuarios(data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { cargar(); }, [token]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.usuario || (!editMode && !formData.password)) return alert('Usuario y contraseña obligatorios');
-    
-    const url = editMode ? `${API_URL}/admin/usuarios/${editMode.id}` : `${API_URL}/admin/usuarios`;
-    const method = editMode ? 'PUT' : 'POST';
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      if (res.ok) {
-        setFormData({ usuario: '', password: '', nombre: '', rol: 'admin' });
-        setEditMode(null);
-        cargar();
-      } else {
-        const err = await res.json() as any;
-        alert(err.error);
-      }
-    } catch (e) { alert('Error al procesar solicitud'); }
-  };
-
-  const handleToggleActivo = async (u: any) => {
-    try {
-      const res = await fetch(`${API_URL}/admin/usuarios/${u.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ activo: !u.activo })
-      });
-      if (res.ok) cargar();
-    } catch (e) { alert('Error'); }
-  };
-
-  const handleBorrar = async (id: number) => {
-    if (!confirm('¿Eliminar este usuario definitivamente?')) return;
-    try {
-      const res = await fetch(`${API_URL}/admin/usuarios/${id}`, { 
-        method: 'DELETE', 
-        headers: { 'Authorization': `Bearer ${token}` } 
-      });
-      if (res.ok) cargar();
-      else {
-        const err = await res.json() as any;
-        alert(err.error);
-      }
-    } catch (e) { alert('Error'); }
-  };
-
-  const startEdit = (u: any) => {
-    setEditMode(u);
-    setFormData({ usuario: u.usuario, password: '', nombre: u.nombre, rol: u.rol });
-  };
-
-  return (
-    <div className="animate-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1>Gestión de Usuarios</h1>
-        {editMode && <button className="btn btn-outline btn-sm" onClick={() => { setEditMode(null); setFormData({ usuario: '', password: '', nombre: '', rol: 'admin' }); }}>Cancelar Edición</button>}
-      </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 300px) 1fr', gap: '1.5rem', marginTop: '1rem' }}>
-        <div className="card" style={{ padding: '1.5rem', height: 'fit-content', position: 'sticky', top: '2rem' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>{editMode ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Nombre Real</label>
-              <input className="form-input" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} placeholder="Ej: Juan Perez" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Usuario</label>
-              <input className="form-input" value={formData.usuario} onChange={e => setFormData({...formData, usuario: e.target.value})} placeholder="Ej: jperez" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contraseña {editMode && '(dejar vacío para no cambiar)'}</label>
-              <input type="password" className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Rol</label>
-              <select className="form-select" value={formData.rol} onChange={e => setFormData({...formData, rol: e.target.value})}>
-                <option value="admin">Administrador</option>
-                <option value="superadmin">Super Administrador</option>
-              </select>
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-              {editMode ? 'Guardar Cambios' : 'Crear Usuario'}
-            </button>
-          </form>
-        </div>
-
-        <div className="card" style={{ padding: '0.75rem' }}>
-          <div className="admin-table-container" style={{ border: 'none', boxShadow: 'none' }}>
-            <table className="admin-table" style={{ tableLayout: 'fixed', width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '0.6rem 0.4rem', width: '25%', fontSize: '0.65rem' }}>Nombre</th>
-                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Usuario</th>
-                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Rol</th>
-                  <th style={{ padding: '0.6rem 0.4rem', width: '15%', fontSize: '0.65rem' }}>Estado</th>
-                  <th style={{ padding: '0.6rem 0.4rem', width: '20%', fontSize: '0.65rem' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u: any) => (
-                  <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.6 }}>
-                    <td style={{ padding: '0.6rem 0.4rem', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><strong>{u.nombre}</strong></td>
-                    <td style={{ padding: '0.6rem 0.4rem', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.usuario}</td>
-                    <td style={{ padding: '0.6rem 0.4rem' }}><span className={`badge badge-${u.rol === 'superadmin' ? 'contactado' : 'pendiente'}`} style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}>{u.rol}</span></td>
-                    <td style={{ padding: '0.6rem 0.4rem' }}>
-                      <button 
-                        className={`badge ${u.activo ? 'badge-pendiente' : 'badge-cancelada'}`} 
-                        style={{ cursor: 'pointer', border: 'none', appearance: 'none', fontSize: '0.6rem', padding: '0.2rem 0.4rem' }}
-                        onClick={() => handleToggleActivo(u)}
-                      >
-                        {u.activo ? 'ACTIVO' : 'INACTIVO'}
-                      </button>
-                    </td>
-                    <td style={{ padding: '0.6rem 0.4rem' }}>
-                      <div className="flex gap-1">
-                        <button className="btn btn-ghost" style={{ padding: '0.2rem' }} onClick={() => startEdit(u)}><Edit3 size={14} /></button>
-                        <button className="btn btn-ghost" style={{ color: 'var(--error)', padding: '0.2rem' }} onClick={() => handleBorrar(u.id)}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default AdminPanel;

@@ -13,10 +13,12 @@ import {
   HelpCircle,
   Plus,
   Trash2,
-  Calendar
+  Calendar,
+  Wand2,
+  RotateCcw
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
 
 const STEPS = [
   { id: 1, label: 'Alumno', icon: <User size={18} /> },
@@ -46,6 +48,14 @@ const ORDEN_ESCOLARIDAD = [
   '1° grado', '2° grado', '3° grado', '4° grado', '5° grado', '6° grado', '7° grado',
   '1° año', '2° año', '3° año', '4° año', '5° año'
 ];
+
+const LEVEL_NAMES = ['Nivel Inicial', 'Primaria (EPO)', 'Secundaria (ESO)'];
+const getLevelForGrade = (grade: string) => {
+  if (['Sala de 3 años', 'Sala de 4 años', 'Sala de 5 años'].includes(grade)) return 'Nivel Inicial';
+  if (grade.includes('grado')) return 'Primaria (EPO)';
+  if (grade.includes('año')) return 'Secundaria (ESO)';
+  return 'Otros';
+};
 
 const FormularioIngreso = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -181,6 +191,60 @@ const FormularioIngreso = () => {
         setFieldErrors(prev => prev.filter(f => f !== errorKey));
     }
   };
+
+  const propagateSchooling = (index: number) => {
+    const item = data.escolaridad[index];
+    if (!item.escuela) {
+      alert('Primero ingrese el nombre de la institución para poder propagarlo.');
+      return;
+    }
+
+    const newList = [...data.escolaridad];
+    const yearBase = parseInt(item.anio_cursado);
+    
+    const currentLevel = getLevelForGrade(item.nivel);
+    if (currentLevel === 'Otros') return;
+
+    // Propagar desde este año HACIA ADELANTE en el mismo nivel
+    for (let i = index; i < newList.length; i++) {
+        if (getLevelForGrade(newList[i].nivel) !== currentLevel) break;
+        
+        const diff = i - index;
+        newList[i] = {
+            ...newList[i],
+            escuela: item.escuela,
+            anio_cursado: !isNaN(yearBase) ? (yearBase + diff).toString() : newList[i].anio_cursado
+        };
+    }
+
+    setData({ ...data, escolaridad: newList });
+  };
+
+  const handleRepeatGrade = (index: number) => {
+    const newList = [...data.escolaridad];
+    const item = newList[index];
+    const yearBase = parseInt(item.anio_cursado);
+
+    // Insertamos la fila de repitencia con el año siguiente
+    newList.splice(index + 1, 0, { 
+      nivel: item.nivel, 
+      anio_cursado: !isNaN(yearBase) ? (yearBase + 1).toString() : '', 
+      escuela: item.escuela, 
+      observaciones: '(Repitió)' 
+    });
+
+    // Corregimos TODOS los años siguientes en toda la lista (sumar 1 a cada uno)
+    for (let i = index + 2; i < newList.length; i++) {
+      const currentYear = parseInt(newList[i].anio_cursado);
+      if (!isNaN(currentYear)) {
+        newList[i].anio_cursado = (currentYear + 1).toString();
+      }
+    }
+    
+    setData({ ...data, escolaridad: newList });
+  };
+
+
 
   const removeFromArray = (key: string, index: number) => {
     if (key === 'padres' && data.padres.length <= 1) {
@@ -321,7 +385,7 @@ const FormularioIngreso = () => {
       setSuccess(true);
     } catch (err: any) {
       console.error('Error en el envío:', err);
-      setError(`Error: ${err.message}. Verifique su conexión.`);
+      setError(`Error: ${err.message}. Verifique su conexión a internet o intente nuevamente en unos instantes.`);
     } finally {
       setLoading(false);
     }
@@ -522,57 +586,72 @@ const FormularioIngreso = () => {
               <strong>Esto nos ayuda a conocer su trayectoria pedagógica.</strong>
             </p>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {data.escolaridad.map((e, idx) => {
-                const targetGradeIndex = ORDEN_ESCOLARIDAD.indexOf(data.ficha.grado_anio);
-                const currentGradeIndex = ORDEN_ESCOLARIDAD.indexOf(e.nivel);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+              {LEVEL_NAMES.map((levelName) => {
+                const itemsInLevel = data.escolaridad.map((e, idx) => ({ ...e, originalIndex: idx }))
+                  .filter(e => getLevelForGrade(e.nivel) === levelName);
                 
-                // Si es un grado estándar pero está después del grado de ingreso, no lo mostramos
-                if (currentGradeIndex !== -1 && targetGradeIndex !== -1 && currentGradeIndex > targetGradeIndex) {
-                  return null;
-                }
+                const visibleInLevel = itemsInLevel.filter(e => {
+                  const targetGradeIndex = ORDEN_ESCOLARIDAD.indexOf(data.ficha.grado_anio);
+                  const currentGradeIndex = ORDEN_ESCOLARIDAD.indexOf(e.nivel);
+                  return currentGradeIndex === -1 || targetGradeIndex === -1 || currentGradeIndex <= targetGradeIndex;
+                });
 
-                const isFixed = ORDEN_ESCOLARIDAD.includes(e.nivel);
+                if (visibleInLevel.length === 0) return null;
 
                 return (
-                  <div key={idx} className="card animate-in" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderLeft: isFixed ? '4px solid var(--primary)' : '4px solid var(--accent)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
-                      <div>
-                        <label className="form-label" style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Nivel / Grado</label>
-                        {isFixed ? (
-                          <div style={{ fontWeight: 700, color: 'var(--primary)', padding: '0.5rem 0' }}>{e.nivel}</div>
-                        ) : (
-                          <input 
-                            className="form-input" 
-                            placeholder="Ej: Otros estudios" 
-                            value={e.nivel} 
-                            onChange={v => updateArray('escolaridad', idx, 'nivel', v.target.value)} 
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <label className="form-label" style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Institución / Escuela</label>
-                        <input 
-                          className="form-input" 
-                          placeholder="Nombre de la escuela" 
-                          value={e.escuela} 
-                          onChange={v => updateArray('escolaridad', idx, 'escuela', v.target.value)} 
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label" style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>Año cursado</label>
-                        <input 
-                          className="form-input" 
-                          placeholder="Ej: 2023" 
-                          value={e.anio_cursado} 
-                          onChange={v => updateArray('escolaridad', idx, 'anio_cursado', v.target.value)} 
-                        />
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        {!isFixed && (
-                          <button onClick={() => removeFromArray('escolaridad', idx)} className="btn btn-ghost" style={{color:'var(--error)', padding: '0.5rem'}}><Trash2 size={18} /></button>
-                        )}
-                      </div>
+                  <div key={levelName} className="animate-in" style={{ background: 'white', padding: '1.75rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                       <div style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.6rem', borderRadius: '10px' }}><BookOpen size={20} /></div>
+                       <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{levelName}</h4>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0', fontWeight: 500, lineHeight: '1.4' }}>
+                            Si hizo todo el nivel en una institución: cargue nombre/año y pulse "Autocompletar" para rellenar el resto.<br/>
+                            Si cambió de institución o repitió: cargue el cambio/repitencia y pulse "Autocompletar" desde esa fila hacia adelante.
+                          </p>
+                       </div>
+                    </div>
+
+                    <div className="animate-in">
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {visibleInLevel.map((e) => {
+                            const idx = e.originalIndex;
+                            const isFixed = ORDEN_ESCOLARIDAD.includes(e.nivel);
+                            const canRepeat = levelName !== 'Nivel Inicial';
+
+                            return (
+                              <div key={`${idx}-${e.nivel}`} className="schooling-row" style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 0.8fr 120px 140px 40px', gap: '0.75rem', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-main)', borderRadius: '8px' }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{e.nivel}</div>
+                                <input className="form-input" style={{ height: '38px' }} placeholder="Escuela" value={e.escuela} onChange={v => updateArray('escolaridad', idx, 'escuela', v.target.value)} />
+                                <input className="form-input" style={{ height: '38px', textAlign: 'center' }} placeholder="Año" value={e.anio_cursado} onChange={v => updateArray('escolaridad', idx, 'anio_cursado', v.target.value)} />
+                                
+                                {canRepeat ? (
+                                  <button 
+                                    className="btn btn-ghost btn-sm" 
+                                    onClick={() => handleRepeatGrade(idx)}
+                                    title="Haga clic si el alumno repitió este año"
+                                    style={{ padding: '4px 8px', fontSize: '0.65rem', height: '32px', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', color: 'var(--accent)', border: '1px solid var(--border-color)' }}
+                                  >
+                                    <RotateCcw size={12} /> Repitió grado
+                                  </button>
+                                ) : <div />}
+
+                                <button 
+                                  className="btn btn-ghost btn-sm" 
+                                  onClick={() => propagateSchooling(idx)}
+                                  title="Autocompletar los años siguientes con estos datos"
+                                  style={{ padding: '4px 8px', fontSize: '0.7rem', height: '32px', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--primary-soft)', color: 'var(--primary)', border: '1px solid var(--primary-soft)' }}
+                                >
+                                  <Wand2 size={12} /> Autocompletar
+                                </button>
+                                
+                                {(!isFixed || e.observaciones.includes('Repitió')) ? (
+                                  <button onClick={() => removeFromArray('escolaridad', idx)} style={{ color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                ) : <div />}
+                              </div>
+                            );
+                          })}
+                       </div>
                     </div>
                   </div>
                 );
@@ -774,7 +853,7 @@ const FormularioIngreso = () => {
             </div>
             <p className="mb-6" style={{fontSize: '0.9375rem', color: 'var(--text-muted)' }}>Cargue los datos de todas las personas que viven con el alumno/a (Hermanos/as, abuelos, tíos, parejas, etc.).</p>
             
-            <div className="admin-table-container mb-10" style={{boxShadow: 'none', borderStyle: 'dashed'}}>
+            <div className="admin-table-container responsive-table-container mb-10" style={{boxShadow: 'none', borderStyle: 'dashed'}}>
               <table className="admin-table">
                 <thead>
                   <tr style={{background: 'var(--bg-main)'}}>
@@ -788,7 +867,7 @@ const FormularioIngreso = () => {
                 <tbody>
                   {data.hermanos.map((h, idx) => (
                     <tr key={idx} className="animate-in" style={{animationDelay: `${idx * 0.1}s`}}>
-                      <td>
+                      <td data-label="Vínculo">
                         <select className="form-select" style={{border:'none', background:'transparent', padding: '0.5rem', width: '100%'}} value={h.vinculo} onChange={v => updateArray('hermanos', idx, 'vinculo', v.target.value)}>
                           <option value="">Seleccionar...</option>
                           <option value="Hermano/a">Hermano/a</option>
@@ -801,9 +880,9 @@ const FormularioIngreso = () => {
                           <input className="form-input" style={{padding: '0.25rem 0.5rem', marginTop: '0.25rem', fontSize: '0.8rem'}} placeholder="¿Cuál?" value={h.vinculo_otro} onChange={v => updateArray('hermanos', idx, 'vinculo_otro', v.target.value)} />
                         )}
                       </td>
-                      <td><input className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="Nombre completo" value={h.nombre_apellido} onChange={v => updateArray('hermanos', idx, 'nombre_apellido', v.target.value)} /></td>
-                      <td><input type="text" className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="dd/mm/aaaa" value={h.fecha_nac} onChange={v => updateArray('hermanos', idx, 'fecha_nac', v.target.value)} /></td>
-                      <td>
+                      <td data-label="Nombre y Apellido"><input className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="Nombre completo" value={h.nombre_apellido} onChange={v => updateArray('hermanos', idx, 'nombre_apellido', v.target.value)} /></td>
+                      <td data-label="Fecha Nac."><input type="text" className="form-input" style={{border:'none', background:'transparent', padding: '0.5rem'}} placeholder="dd/mm/aaaa" value={h.fecha_nac} onChange={v => updateArray('hermanos', idx, 'fecha_nac', v.target.value)} /></td>
+                      <td data-label="Institución">
                         <input 
                           className="form-input" 
                           style={{border:'none', background:'transparent', padding: '0.5rem', opacity: h.vinculo === 'Hermano/a' ? 1 : 0.4}} 
@@ -813,7 +892,7 @@ const FormularioIngreso = () => {
                           onChange={v => updateArray('hermanos', idx, 'estudios_escuela', v.target.value)} 
                         />
                       </td>
-                      <td style={{textAlign: 'center'}}><button onClick={() => removeFromArray('hermanos', idx)} className="btn btn-ghost" style={{color:'var(--error)', padding: '0.5rem'}}><Trash2 size={18} /></button></td>
+                      <td data-label="Acción" style={{textAlign: 'center'}}><button onClick={() => removeFromArray('hermanos', idx)} className="btn btn-ghost" style={{color:'var(--error)', padding: '0.5rem'}}><Trash2 size={18} /></button></td>
                     </tr>
                   ))}
                   {data.hermanos.length === 0 && <tr><td colSpan={5} style={{textAlign:'center', padding:'2.5rem', color: 'var(--text-muted)', fontSize: '0.875rem'}}>No se registraron familiares.</td></tr>}
@@ -821,7 +900,7 @@ const FormularioIngreso = () => {
               </table>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <div className="form-group">
                     <label className="form-label" style={{fontSize: '1rem'}}>Situación Socioeconómica *</label>
                     <select className={getSelectClass('situacion_socioeconomica')} name="situacion_socioeconomica" value={data.ficha.situacion_socioeconomica} onChange={handleFichaChange}>

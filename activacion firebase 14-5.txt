@@ -1,0 +1,10 @@
+Para activar definitivamente a ese usuario, una vez que la cuota de Firebase se reinicie (mañana por la mañana), debes asegurarte de cumplir estos 3 pasos:
+
+En Authentication: Busca el email del usuario y verifica que no esté deshabilitado (si lo está, dale a "Habilitar cuenta").
+En Firestore (Base de datos):
+Busca la colección users.
+Asegúrate de que exista un documento cuyo ID sea la UID del usuario.
+Dentro de ese documento, el campo status debe decir active.
+El cambio de hoy: Gracias a la modificación que acabo de hacer en store.js, ahora la app solo leerá los últimos 300 movimientos en lugar de toda la base de datos cada vez que alguien entre. Esto protegerá tu cuenta gratuita de Firebase para que no se agote tan rápido.
+He documentado todo el proceso y los cambios realizados en el siguiente archivo: 
+walkthrough.md

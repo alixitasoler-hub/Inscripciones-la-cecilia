@@ -38,6 +38,7 @@
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   
+  --primary-soft: rgba(28, 63, 96, 0.1);
   --radius-sm: 0.375rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
@@ -97,6 +98,11 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 2rem;
+}
+
+.container-fluid {
+  width: 100%;
+  padding: 0 1rem;
 }
 
 .site-header {
@@ -427,6 +433,86 @@ h1, h2, h3, h4, h5, h6 {
   .btn {
     width: 100%; /* Botones a ancho completo en móviles muy pequeños */
   }
+
+  /* Specific fixes for complex grids */
+  .schooling-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    padding: 1rem !important;
+    border: 1px solid var(--border-color);
+  }
+
+  .schooling-row > div:first-child {
+    grid-column: span 2;
+    background: var(--primary-soft);
+    padding: 0.4rem;
+    border-radius: 4px;
+  }
+
+  .schooling-row > input:nth-child(2) {
+    grid-column: span 2;
+  }
+
+  .schooling-row > .btn-ghost {
+    grid-column: span 1;
+    font-size: 0.6rem !important;
+  }
+
+  /* Responsive Table Stack */
+  .responsive-table-container {
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .responsive-table-container table, 
+  .responsive-table-container thead, 
+  .responsive-table-container tbody, 
+  .responsive-table-container th, 
+  .responsive-table-container td, 
+  .responsive-table-container tr {
+    display: block;
+  }
+
+  .responsive-table-container thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .responsive-table-container tr {
+    margin-bottom: 1rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+  }
+
+  .responsive-table-container td {
+    border: none !important;
+    border-bottom: 1px solid #eee !important;
+    position: relative;
+    padding-left: 50% !important;
+    text-align: left !important;
+    min-height: 40px;
+  }
+
+  .responsive-table-container td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .responsive-table-container td:before {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    transform: translateY(-50%);
+    font-weight: 700;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    content: attr(data-label);
+  }
 }
 
 /* Admin Dashboard Elements */
@@ -732,5 +818,94 @@ h1, h2, h3 {
   opacity: 0.7;
   cursor: wait !important;
   pointer-events: none;
+}
+
+/* --- ADMIN V2: MODERN DESIGN SYSTEM --- */
+
+.v2-layout {
+  --v2-sidebar-bg: #f8fafc;
+  --v2-card-bg: #ffffff;
+  --v2-accent: #FF6D00;
+  --v2-primary: #1C3F60;
+  --v2-border: #e2e8f0;
+  --v2-text-muted: #64748b;
+  --v2-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.kanban-container {
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius-lg);
+}
+
+.kanban-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kanban-grid::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.kanban-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.kanban-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark-glass {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Premium Gradient Button Override */
+.btn-premium {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(28, 63, 96, 0.2);
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(28, 63, 96, 0.3);
+}
+
+/* Scrollbar customization for content areas */
+.v2-content::-webkit-scrollbar,
+.pending-list::-webkit-scrollbar,
+.calendar-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.v2-content::-webkit-scrollbar-track,
+.pending-list::-webkit-scrollbar-track,
+.calendar-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.v2-content::-webkit-scrollbar-thumb,
+.pending-list::-webkit-scrollbar-thumb,
+.calendar-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.v2-content::-webkit-scrollbar-thumb:hover,
+.pending-list::-webkit-scrollbar-thumb:hover,
+.calendar-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 

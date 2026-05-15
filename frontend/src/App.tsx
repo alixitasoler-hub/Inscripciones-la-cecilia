@@ -20,7 +20,7 @@ function App() {
       </header>
 
       <main className="main-content">
-        <div className="container">
+        <div className={window.location.pathname.includes('/admin/v2') ? 'container-fluid' : 'container'}>
           <Routes>
             <Route path="/" element={<FormularioIngreso />} />
             <Route path="/admin/*" element={<AdminPanel />} />
@@ -29,8 +29,9 @@ function App() {
       </main>
 
       <footer className="no-print" style={{ padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-        <div className="container">
+        <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem' }}>
           <p>© {new Date().getFullYear()} Escuela La Cecilia - Sistema de Inscripciones Digitales</p>
+          <Link to="/admin" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 600 }}>· Acceso Administrativo</Link>
         </div>
       </footer>
     </Router>

@@ -102,7 +102,7 @@ const logAction = async (env: Env, userId: number, fichaId: number | null, actio
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -174,35 +174,52 @@ export default {
 
         if (batch.length > 0) await env.DB.batch(batch);
 
-        // Notificación vía Resend
+        // Notificación vía Resend (Asincrónica si es posible)
         if (env.RESEND_API_KEY) {
-          console.log('DEBUG_EMAIL: RESEND_API_KEY detectada.');
-          try {
-            const resend = new Resend(env.RESEND_API_KEY);
-            await resend.emails.send({
-              from: 'Inscripciones La Cecilia <onboarding@resend.dev>',
-              to: 'laceciliasecretaria@gmail.com',
-              subject: `Nueva Solicitud: ${ficha.apellido}, ${ficha.nombre}`,
-              text: `Nueva solicitud recibida.\nAlumno: ${ficha.apellido}, ${ficha.nombre}\nNivel: ${ficha.nivel_ingreso}\nLink: ${env.FRONTEND_URL}/admin`
-            });
-          } catch (err: any) { console.error('Error Resend:', err.message); }
+          const sendResend = async () => {
+            console.log('DEBUG_EMAIL: Iniciando envío Resend...');
+            try {
+              const resend = new Resend(env.RESEND_API_KEY);
+              await resend.emails.send({
+                from: 'Inscripciones La Cecilia <onboarding@resend.dev>',
+                to: 'laceciliasecretaria@gmail.com',
+                subject: `Nueva Solicitud: ${ficha.apellido}, ${ficha.nombre}`,
+                text: `Nueva solicitud recibida.\nAlumno: ${ficha.apellido}, ${ficha.nombre}\nNivel: ${ficha.nivel_ingreso}\nLink: ${env.FRONTEND_URL}/admin`
+              });
+              console.log('DEBUG_EMAIL: Resend enviado con éxito.');
+            } catch (err: any) { console.error('Error Resend:', err.message); }
+          };
+          
+          if (ctx && typeof ctx.waitUntil === 'function') {
+            ctx.waitUntil(sendResend());
+          } else {
+            await sendResend();
+          }
         }
 
-        // Notificación vía Telegram
+        // Notificación vía Telegram (Asincrónica si es posible)
         if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
-          const text = `<b>🔔 Nueva Solicitud de Ingreso</b>\n\n` +
-                       `<b>Alumno:</b> ${ficha.apellido}, ${ficha.nombre}\n` +
-                       `<b>DNI:</b> ${ficha.dni_nro}\n` +
-                       `<b>Nivel:</b> ${ficha.nivel_ingreso} - ${ficha.grado_anio}\n\n` +
-                       `<a href="${env.FRONTEND_URL}/admin">Ver en el Panel Administrativo</a>`;
-          
-          try {
-            await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' })
-            });
-          } catch (e) { console.error('Error Telegram:', e); }
+          const sendTelegram = async () => {
+            const text = `<b>🔔 Nueva Solicitud de Ingreso</b>\n\n` +
+                         `<b>Alumno:</b> ${ficha.apellido}, ${ficha.nombre}\n` +
+                         `<b>DNI:</b> ${ficha.dni_nro}\n` +
+                         `<b>Nivel:</b> ${ficha.nivel_ingreso} - ${ficha.grado_anio}\n\n` +
+                         `<a href="${env.FRONTEND_URL}/admin">Ver en el Panel Administrativo</a>`;
+            
+            try {
+              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' })
+              });
+            } catch (e) { console.error('Error Telegram:', e); }
+          };
+
+          if (ctx && typeof ctx.waitUntil === 'function') {
+            ctx.waitUntil(sendTelegram());
+          } else {
+            await sendTelegram();
+          }
         }
 
         return jsonResponse({ success: true, id: fichaId }, 201);
@@ -230,7 +247,7 @@ export default {
           }
           
           // Generar un token firmado HMAC
-          const expiry = Date.now() + (24 * 60 * 60 * 1000); // 24hs
+          const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 días
           const payload = btoa(`${user.id}:${user.usuario}:${expiry}`);
           const signature = await generateSignature(payload, env.AUTH_SECRET || 'default_fallback_secret');
           const token = `${payload}.${signature}`;
