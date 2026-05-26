@@ -180,10 +180,18 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user })
 
         <div className="v2-user-profile">
           <div className="v2-avatar">{user?.nombre?.charAt(0) || 'U'}</div>
-          <div className="v2-user-info">
+          <div className="v2-user-info" style={{ flex: 1 }}>
             <div className="v2-user-name">{user?.nombre}</div>
             <div className="v2-user-role">{user?.rol}</div>
           </div>
+          <button 
+            className="btn btn-ghost" 
+            onClick={onAuthError} 
+            title="Cerrar Sesión"
+            style={{ padding: '0.5rem', color: 'var(--error)' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
         </div>
       </aside>
 

@@ -56,10 +56,11 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
 
   const filteredFichas = useMemo(() => {
     return fichas.filter(f => {
-      const matchSearch = (f.apellido + ' ' + f.nombre + ' ' + f.dni_nro).toLowerCase().includes(search.toLowerCase());
+      const matchSearch = ((f.apellido || '') + ' ' + (f.nombre || '') + ' ' + (f.dni_nro || '')).toLowerCase().includes(search.toLowerCase());
       const matchLevel = filterLevel ? f.nivel_ingreso === filterLevel : true;
+      const status = f.estado || 'pendiente';
       const matchStage = activeStage === 'all' ? true : 
-                         (activeStage === 'pendiente' ? (f.estado === 'pendiente' || f.estado === 'contactado') : f.estado === activeStage);
+                         (activeStage === 'pendiente' ? (status === 'pendiente' || status === 'contactado') : status === activeStage);
       return matchSearch && matchLevel && matchStage;
     });
   }, [fichas, search, filterLevel, activeStage]);
@@ -306,9 +307,9 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
             {s.id === 'cancelado' && <XCircle size={16} />}
             {s.title}
             <span className="stage-count">
-              {s.id === 'all' ? fichas.length : 
-               s.id === 'pendiente' ? fichas.filter(f => f.estado === 'pendiente' || f.estado === 'contactado').length :
-               fichas.filter(f => f.estado === s.id).length}
+               {s.id === 'all' ? fichas.length : 
+                s.id === 'pendiente' ? fichas.filter(f => (f.estado || 'pendiente') === 'pendiente' || f.estado === 'contactado').length :
+                fichas.filter(f => (f.estado || 'pendiente') === s.id).length}
             </span>
           </button>
         ))}
@@ -359,7 +360,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
             </div>
             <div className="info-date">
               <div style={{fontSize:'0.65rem', color:'var(--text-muted)', textTransform:'uppercase', fontWeight:800}}>Solicitud</div>
-              <div style={{fontSize:'0.85rem', fontWeight:600}}>{new Date(f.fecha_solicitud).toLocaleDateString()}</div>
+              <div style={{fontSize:'0.85rem', fontWeight:600}}>{new Date(f.fecha_solicitud || f.created_at || Date.now()).toLocaleDateString()}</div>
             </div>
             <div className="row-actions">
               <button 
@@ -477,7 +478,7 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
             </div>
             <div>
               <label style={{fontSize:'0.65rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:'0.4rem'}}>Fecha Solicitud</label>
-              <div style={{fontWeight:700, fontSize:'1rem'}}>{new Date(ficha.fecha_solicitud).toLocaleDateString()}</div>
+              <div style={{fontWeight:700, fontSize:'1rem'}}>{new Date(ficha.fecha_solicitud || ficha.created_at || Date.now()).toLocaleDateString()}</div>
             </div>
           </div>
 
