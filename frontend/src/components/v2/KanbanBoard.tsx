@@ -41,7 +41,10 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
 
   const fetchFichas = async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/fichas`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/admin/fichas`, { 
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      });
       if (res.status === 401) return onAuthError();
       const data = await res.json();
       if (Array.isArray(data)) setFichas(data);
