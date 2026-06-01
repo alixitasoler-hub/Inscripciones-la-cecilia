@@ -1,18 +1,11 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import FormularioIngreso from './components/FormularioIngreso';
-import AdminPanel from './components/AdminPanel';
+import React from 'react';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Ruta pública para inscripciones */}
-        <Route path="/" element={<FormularioIngreso />} />
-        
-        {/* Ruta para el panel de administración */}
-        <Route path="/admin/*" element={<AdminPanel />} />
-      </Routes>
-    </Router>
+    <div style={{ padding: '50px', fontSize: '20px' }}>
+      <h1>¡HOLA! Si lees esto, React funciona.</h1>
+      <p>El problema no es la app, es el componente del Admin.</p>
+    </div>
   );
 }
 
