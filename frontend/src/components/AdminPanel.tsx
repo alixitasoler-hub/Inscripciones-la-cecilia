@@ -1,57 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Calendar, 
-  Printer,
-  MessageCircle,
-  Edit3,
-  Save,
-  Plus,
-  X,
-  Trash2,
-  ArrowLeft
-} from 'lucide-react';
+import AdminPanelV2 from './v2/AdminPanelV2'; // Asegúrate que la ruta sea correcta
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
-
+<<<<<<< HEAD
 // IMPORTANTE: React.lazy debe declararse ANTES de ser usado en el componente
 const AdminPanelV2 = React.lazy(() => import('./v2/AdminPanelV2'));
 
+=======
+// Simulación de autenticación simple para probar
+>>>>>>> 689cf27e856fa33c88cd84b1121d25764cbf8fe2
 const AdminPanel = () => {
-  const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
-  const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('adminUser') || 'null'));
-  const [isAuth, setIsAuth] = useState(Boolean(localStorage.getItem('adminToken')));
-  const [loginForm, setLoginForm] = useState({ usuario: '', password: '' });
-  const [error, setError] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState('');
+  const [user, setUser] = useState<any>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${API_URL}/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
-      const data = await res.json() as any;
-      if (res.ok) {
-        setToken(data.token);
-        setUser(data.user);
-        localStorage.setItem('adminToken', data.token);
-        localStorage.setItem('adminUser', JSON.stringify(data.user));
-        setIsAuth(true);
-        setError('');
-      } else {
-        setError(data.error || 'Credenciales incorrectas');
-      }
-    } catch (err) { setError('Error de conexión'); }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    setToken(''); setUser(null); setIsAuth(false);
-  };
-
+<<<<<<< HEAD
   // Validación de expiración del token — compatible con formato payload.signature
   useEffect(() => {
     if (token) {
@@ -72,44 +34,57 @@ const AdminPanel = () => {
         // Si no se puede decodificar, cerrar sesión por seguridad
         logout();
       }
+=======
+  // Esto es solo para probar. En tu app real, aquí iría tu lógica de login
+  useEffect(() => {
+    const storedToken = localStorage.getItem('admin_token');
+    const storedUser = localStorage.getItem('admin_user');
+    
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+      setIsAuthenticated(true);
+>>>>>>> 689cf27e856fa33c88cd84b1121d25764cbf8fe2
     }
-  }, [token]);
+  }, []);
 
-  if (!isAuth) {
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Lógica de login simulada
+    const fakeToken = "token-secreto-123";
+    const fakeUser = { nombre: "Admin", rol: "superadmin" };
+    
+    localStorage.setItem('admin_token', fakeToken);
+    localStorage.setItem('admin_user', JSON.stringify(fakeUser));
+    
+    setToken(fakeToken);
+    setUser(fakeUser);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    setIsAuthenticated(false);
+    setToken('');
+    setUser(null);
+  };
+
+  if (!isAuthenticated) {
     return (
-      <div className="card animate-in" style={{ maxWidth: '400px', margin: '4rem auto', padding: '2.5rem', textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-          <img src="/logo.jpg" alt="Logo Escuela La Cecilia" style={{ width: '120px', height: 'auto', borderRadius: '50%', border: '3px solid var(--accent)', padding: '4px' }} />
-        </div>
-        <h2>Acceso Administrativo</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Ingrese sus credenciales para continuar.</p>
-        {error && <p className="form-error" style={{ background: '#FEE2E2', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '1rem' }}>{error}</p>}
-        <form onSubmit={handleLogin} style={{marginTop: '2rem'}}>
-          <div className="form-group">
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Usuario" 
-              value={loginForm.usuario} 
-              onChange={(e) => setLoginForm({...loginForm, usuario: e.target.value})} 
-              autoFocus
-              style={{marginBottom: '1rem'}}
-            />
-            <input 
-              type="password" 
-              className="form-input" 
-              placeholder="Contraseña" 
-              value={loginForm.password} 
-              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} 
-            />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>Ingresar al Panel</button>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <form onSubmit={handleLogin} className="p-8 bg-white rounded-lg shadow-md w-full max-w-md">
+          <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Acceso Administrativo</h2>
+          <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+            Entrar (Modo Prueba)
+          </button>
         </form>
       </div>
     );
   }
 
   return (
+<<<<<<< HEAD
     <div className="admin-layout animate-in full-width">
       <main>
         <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>}>
@@ -700,4 +675,14 @@ const DetalleFicha = ({ token, onAuthError }: { token: string, onAuthError: () =
   );
 }
 
+=======
+    <AdminPanelV2 
+      token={token} 
+      onAuthError={handleLogout} 
+      user={user} 
+    />
+  );
+};
+
+>>>>>>> 689cf27e856fa33c88cd84b1121d25764cbf8fe2
 export default AdminPanel;
