@@ -1,15 +1,12 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import FormularioIngreso from './components/FormularioIngreso';
-import AdminPanelV3 from './components/AdminPanelV3'; // Importamos el nuevo
+import React from 'react';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<FormularioIngreso />} />
-        <Route path="/admin" element={<AdminPanelV3 />} />
-      </Routes>
-    </Router>
+    <div style={{ padding: '50px', fontFamily: 'sans-serif' }}>
+      <h1 style={{ color: 'blue' }}>PRUEBA EXITOSA</h1>
+      <p>Si lees esto, hemos roto el bloqueo de la pantalla blanca.</p>
+      <p>Ahora podemos construir el panel encima de esto.</p>
+    </div>
   );
 }
 
