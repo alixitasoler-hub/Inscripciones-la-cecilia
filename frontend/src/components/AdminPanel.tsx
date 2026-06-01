@@ -46,7 +46,8 @@ const AdminPanel = () => {
     );
   }
 
-  return <AdminPanelV2 token={token} onAuthError={handleLogout} user={user} />;
+  // FIX: Agregamos children={null} para cumplir con AdminPanelV2Props
+  return <AdminPanelV2 token={token} onAuthError={handleLogout} user={user} children={null} />;
 };
 
 export default AdminPanel;
