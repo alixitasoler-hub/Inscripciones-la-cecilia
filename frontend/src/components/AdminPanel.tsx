@@ -14,6 +14,9 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
 
+// IMPORTANTE: React.lazy debe declararse ANTES de ser usado en el componente
+const AdminPanelV2 = React.lazy(() => import('./v2/AdminPanelV2'));
+
 const AdminPanel = () => {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('adminUser') || 'null'));
@@ -49,19 +52,24 @@ const AdminPanel = () => {
     setToken(''); setUser(null); setIsAuth(false);
   };
 
+  // Validación de expiración del token — compatible con formato payload.signature
   useEffect(() => {
     if (token) {
       try {
-        const payload = token.split('.')[0];
+        const parts = token.split('.');
+        // El nuevo formato es: base64payload.base64signature (2 partes)
+        // El antiguo era: base64(id:usuario:expires) (1 parte)
+        const payload = parts.length >= 2 ? parts[0] : token;
         const decoded = atob(payload);
-        const parts = decoded.split(':');
-        if (parts.length >= 3) {
-          const expires = parseInt(parts[2]);
+        const segments = decoded.split(':');
+        if (segments.length >= 3) {
+          const expires = parseInt(segments[2]);
           if (expires < Date.now()) {
             logout();
           }
         }
       } catch (e) {
+        // Si no se puede decodificar, cerrar sesión por seguridad
         logout();
       }
     }
@@ -106,17 +114,14 @@ const AdminPanel = () => {
       <main>
         <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>}>
           <Routes>
-            <Route path="/ficha/:id" element={<DetalleFicha token={token} onAuthError={logout} />} />
-            <Route path="/*" element={<AdminPanelV2 token={token} onAuthError={logout} user={user} />} />
+            <Route path="ficha/:id" element={<DetalleFicha token={token} onAuthError={logout} />} />
+            <Route path="*" element={<AdminPanelV2 token={token} onAuthError={logout} user={user} />} />
           </Routes>
         </React.Suspense>
       </main>
     </div>
   );
 };
-
-// Lazy imports
-const AdminPanelV2 = React.lazy(() => import('./v2/AdminPanelV2'));
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -638,7 +643,7 @@ const DetalleFicha = ({ token, onAuthError }: { token: string, onAuthError: () =
           <h2 style={{ textAlign: 'center', color: '#1C3F60', marginBottom: '2rem', fontSize: '14pt', fontWeight: 800, textTransform: 'uppercase' }}>Acuerdo de Admisión y Permanencia</h2>
           <div style={{ padding: '0.5rem', fontSize: '8.5pt', lineHeight: '1.4', textAlign: 'justify' }}>
              <p style={{ marginBottom: '1rem' }}>
-              Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción...
+              Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como "Propósitos de la Escuela", "Principios de la Escuela", "Manual de Bienvenida" y "Manual de Procedimientos", de modo que exista una elección consciente al momento de solicitar la inscripción...
             </p>
             <div style={{ marginTop: '3rem' }}>
               <p style={{ marginBottom: '3rem', fontWeight: 800 }}>NOTIFICACIÓN Y ACUERDO DEL ALUMNO Y LOS PADRES</p>

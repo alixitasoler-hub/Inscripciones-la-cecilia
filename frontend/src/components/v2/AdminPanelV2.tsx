@@ -1,23 +1,23 @@
 import React from 'react';
-import { Routes, Route, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   CalendarDays, 
   Users, 
   BarChart3
 } from 'lucide-react';
-import KanbanBoard from './KanbanBoard';
-import SplitAgenda from './SplitAgenda';
-import MetricsDashboard from './MetricsDashboard';
-import UserManagement from './UserManagement';
 
 interface AdminPanelV2Props {
   token: string;
   onAuthError: () => void;
   user: any;
+  // El contenido de la sección activa se pasa como children
+  // Este componente es solo el layout (sidebar + área de contenido)
+  // Las rutas se manejan en AdminPanel.tsx — sin <Routes> anidados
+  children: React.ReactNode;
 }
 
-const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user }) => {
+const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ onAuthError, user, children }) => {
 
   return (
     <div className="v2-layout animate-in">
@@ -69,6 +69,7 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user })
           font-weight: 600;
           font-size: 0.875rem;
           transition: all 0.2s ease;
+          border-left: 4px solid transparent;
         }
 
         .v2-nav-item:hover {
@@ -116,10 +117,12 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user })
           color: white;
           font-weight: 800;
           font-size: 0.8rem;
+          flex-shrink: 0;
         }
 
         .v2-user-info {
           overflow: hidden;
+          flex: 1;
         }
 
         .v2-user-name {
@@ -156,7 +159,7 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user })
 
       <aside className="v2-sidebar">
         <div className="v2-sidebar-header">
-          <div style={{ background: 'var(--primary)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800 }}>C</div>
+          <div style={{ background: 'var(--primary)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, flexShrink: 0 }}>C</div>
           <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)' }}>La Cecilia <span className="v2-badge-beta">Panel Pro</span></div>
         </div>
 
@@ -180,29 +183,27 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ token, onAuthError, user })
 
         <div className="v2-user-profile">
           <div className="v2-avatar">{user?.nombre?.charAt(0) || 'U'}</div>
-          <div className="v2-user-info" style={{ flex: 1 }}>
-            <div className="v2-user-name">{user?.nombre}</div>
+          <div className="v2-user-info">
+            <div className="v2-user-name">{user?.nombre || user?.usuario}</div>
             <div className="v2-user-role">{user?.rol}</div>
           </div>
           <button 
             className="btn btn-ghost" 
             onClick={onAuthError} 
             title="Cerrar Sesión"
-            style={{ padding: '0.5rem', color: 'var(--error)' }}
+            style={{ padding: '0.5rem', color: 'var(--error)', flexShrink: 0 }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
           </button>
         </div>
       </aside>
 
       <main className="v2-content">
-        <Routes>
-          <Route path="/" element={<KanbanBoard token={token} onAuthError={onAuthError} />} />
-          <Route path="/agenda" element={<SplitAgenda token={token} onAuthError={onAuthError} />} />
-          <Route path="/metricas" element={<MetricsDashboard token={token} onAuthError={onAuthError} />} />
-          <Route path="/usuarios" element={<UserManagement token={token} onAuthError={onAuthError} />} />
-          <Route path="/config" element={<div><h1 style={{marginBottom: '1rem'}}>Configuración</h1><p style={{color:'var(--text-muted)'}}>Ajustes globales del sistema de inscripciones.</p></div>} />
-        </Routes>
+        {children}
       </main>
     </div>
   );

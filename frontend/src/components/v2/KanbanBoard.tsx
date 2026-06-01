@@ -511,10 +511,10 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
           </div>
 
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}}>
-            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => window.open(`/admin/ficha/${id}`, '_blank')}>
+            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate(`/admin/ficha/${id}`)}>
               Ver Ficha Completa
             </button>
-            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/v2/agenda')}>
+            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda')}>
               <Calendar size={18} /> Programar Entrevista
             </button>
           </div>
