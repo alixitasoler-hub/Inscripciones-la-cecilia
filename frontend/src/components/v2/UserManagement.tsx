@@ -14,7 +14,7 @@ interface UserManagementProps {
   onAuthError: () => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ token, onAuthError }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState<any | null>(null);

@@ -16,7 +16,7 @@ interface SplitAgendaProps {
   onAuthError: () => void;
 }
 
-const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
+const SplitAgenda: React.FC<SplitAgendaProps> = ({ token }) => {
   const [fichas, setFichas] = useState<any[]>([]);
   const [entrevistas, setEntrevistas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

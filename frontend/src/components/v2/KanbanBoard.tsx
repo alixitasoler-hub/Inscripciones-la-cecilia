@@ -29,7 +29,7 @@ const STAGES = [
   { id: 'cancelado', title: 'Cancelados / Bajas', color: '#EF4444' }
 ];
 
-const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
+const KanbanBoard: React.FC<PipelineProps> = ({ token }) => {
   const [fichas, setFichas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

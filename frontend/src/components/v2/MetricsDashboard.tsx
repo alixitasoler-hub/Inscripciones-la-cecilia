@@ -16,7 +16,7 @@ interface MetricsProps {
   onAuthError: () => void;
 }
 
-const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
+const MetricsDashboard: React.FC<MetricsProps> = ({ token }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
