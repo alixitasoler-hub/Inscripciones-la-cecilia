@@ -1,4 +1,4 @@
-﻿import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import FormularioIngreso from './components/FormularioIngreso';
 import AdminPanel from './components/AdminPanel';
 
@@ -7,7 +7,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<FormularioIngreso />} />
-        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/*" element={<AdminPanel />} />
       </Routes>
     </Router>
   );
