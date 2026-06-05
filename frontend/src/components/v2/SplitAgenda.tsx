@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -26,6 +27,8 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [notas, setNotas] = useState('');
+  
+  const location = useLocation();
 
   const fetchData = async () => {
     try {
@@ -43,7 +46,18 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
       const [dataFichas, dataAgenda] = await Promise.all([resFichas.json(), resAgenda.json()]);
       
       if (Array.isArray(dataFichas)) {
-        setFichas(dataFichas.filter(f => f.estado === 'pendiente' || f.estado === 'contactado'));
+        const filtered = dataFichas.filter(f => f.estado === 'pendiente' || f.estado === 'contactado');
+        setFichas(filtered);
+
+        // Pre-selección de ficha por navegación desde KanbanBoard o FichaDetalle
+        const selectFichaId = location.state?.selectFichaId;
+        if (selectFichaId) {
+          const found = dataFichas.find(f => f.id === Number(selectFichaId));
+          if (found) {
+            setSelectedFicha(found);
+            setScheduleDate(new Date().toISOString().split('T')[0]);
+          }
+        }
       }
       
       if (Array.isArray(dataAgenda)) {
@@ -474,7 +488,12 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                     <button 
                       className="btn btn-ghost" 
                       style={{padding:'0.5rem'}}
-                      onClick={() => window.open(`https://wa.me/${(ev.contacto_entrevista_dato||'').replace(/\D/g,'')}?text=Hola ${ev.contacto_entrevista_nombre}, te recordamos la entrevista...`, '_blank')}
+                      onClick={() => {
+                        const dateStr = new Date(ev.fecha_hora).toLocaleDateString('es-AR');
+                        const timeStr = new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                        const text = `¡Hola, ${ev.contacto_entrevista_nombre}! Hemos recibido la solicitud para el ingreso de *${ev.alumno_apellido}, ${ev.alumno_nombre}* a nuestra Escuela.\nLes proponemos asistir junto con ${ev.alumno_nombre} el día *${dateStr}* a las *${timeStr}*.\nEsperamos tu confirmación para agendar la entrevista o, si fuera necesario, cambiarla para otro día/hora.\n¡Gracias por contactarnos!`;
+                        window.open(`https://wa.me/${(ev.contacto_entrevista_dato||'').replace(/\D/g,'')}?text=${encodeURIComponent(text)}`, '_blank');
+                      }}
                     >
                       <MessageCircle size={18} color="#25D366" />
                     </button>

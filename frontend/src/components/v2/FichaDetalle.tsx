@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Edit3, Save, X, User, Users, BookOpen, Heart, Home } from 'lucide-react';
+import { ArrowLeft, Printer, Edit3, Save, X, User, Users, BookOpen, Heart, Home, Calendar } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
 
@@ -178,17 +178,20 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           </div>
         </div>
 
-        {/* Encabezado de la ficha */}
+        {/* Encabezado de la ficha con Logo de la Escuela */}
         <div style={{ background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius-lg)', padding: '2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', opacity: 0.7, marginBottom: '0.5rem' }}>
-              Ficha de Inscripción #{ficha.id}
-            </div>
-            <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 900 }}>
-              {ficha.apellido}, {ficha.nombre}
-            </h1>
-            <div style={{ marginTop: '0.5rem', opacity: 0.85 }}>
-              DNI {ficha.dni_tipo} {ficha.dni_nro} · {ficha.nivel_ingreso} — {ficha.grado_anio}
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <img src="/logo.png" alt="Escuela La Cecilia" style={{ height: '70px', width: '70px', objectFit: 'contain', borderRadius: '8px', border: '2px solid white', backgroundColor: 'white', padding: '2px' }} />
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', opacity: 0.7, marginBottom: '0.5rem' }}>
+                Ficha de Inscripción #{ficha.id}
+              </div>
+              <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 900 }}>
+                {ficha.apellido}, {ficha.nombre}
+              </h1>
+              <div style={{ marginTop: '0.5rem', opacity: 0.85 }}>
+                DNI {ficha.dni_tipo} {ficha.dni_nro} · {ficha.nivel_ingreso} — {ficha.grado_anio}
+              </div>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -430,6 +433,88 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             </div>
           </Seccion>
 
+          {/* Acuerdo de Admisión y Permanencia (Completo en la vista de impresión) */}
+          <div className="acuerdo-admision" style={{ marginTop: '3rem', borderTop: '2px dashed var(--border-color)', paddingTop: '2.5rem' }}>
+            <style>{`
+              @media print {
+                .acuerdo-admision {
+                  page-break-before: always;
+                  border-top: none;
+                  padding-top: 0;
+                  margin-top: 0;
+                }
+              }
+            `}</style>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--secondary)' }}>ACUERDO DE ADMISIÓN Y PERMANENCIA</h2>
+            </div>
+            <div style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--text-main)', textAlign: 'justify' }}>
+              <p>Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción, contando siempre con la posibilidad de efectuar las consultas que consideren necesarias.</p>
+              <p>No se considera que exista un alumno o alumna fuera y otro u otra dentro de la Escuela, por lo cual se espera una conducta coherente del alumnado con los principios de la misma, en cualquier ámbito en que se encuentren.</p>
+              <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
+              
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ADMISIÓN</h4>
+              <p>La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones. Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>BUEN TRATO</h4>
+              <p>No se permitirá ningún tipo de trato violento, físico ni verbal, como burlas, discriminación, bullying, etc. tanto dentro como fuera de la Escuela. Estas conductas serán informadas y conversadas con las familias y se exigirán seguimientos en cada caso.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>EXPECTATIVAS ACADÉMICAS</h4>
+              <p>Las familias, alumnos y alumnas deben comprender y aceptar que no resulta lógico ni posible que todos lleguen a los mismos resultados en sus aprendizajes académicos, ya que ello dependerá de sus intereses y capacidades. El propósito educativo de la Escuela es colaborar para que cada alumno o alumna pueda conocerse a sí mismo, conocer sus intereses y capacidades y desarrollarlos de la mejor manera, para poder hacer de ellos un medio de vida dentro de un proyecto vital con sentido social. Para los propósitos enunciados se les brindarán las opciones académicas correspondientes y el apoyo necesario. Los alumnos y alumnas podrán elegir las actividades que realizan y proponer otras que no se estén realizando. En todos los casos la tutoría de la Escuela, junto a educadores, hará un seguimiento de cada alumno o alumna, para lo cual se llevará un registro detallado de las actividades.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>MODO DE VIDA - ALIMENTACIÓN</h4>
+              <p>La Escuela propone un modo de vida que contribuya a la salud física y psicológica. Se propone una dieta vegetariana y natural que excluye las carnes de todo tipo y sus derivados, bebidas alcohólicas, gaseosas y golosinas, así como otros alimentos con exceso de dulces o de sal. Tanto en el predio de la Escuela como durante salidas, reuniones, actividades escolares o cualquier otra actividad donde participen grupalmente los alumnos y alumnas se respetará la alimentación vegetariana y los hábitos propuestos. El cumplimiento de esta dieta no es de exigencia en el hogar, pero se solicita a las familias que colaboren para que sus hijos o hijas adopten conscientemente una forma de vida que contribuya a cuidar su salud. En el mismo sentido, no se deben ingresar a la escuela alimentos que no respondan a las pautas de cuidado de la salud que se recomiendan.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CIGARRILLO, ALCOHOL, DROGAS</h4>
+              <p>Se consideran dañinos para la salud el tabaco, alcohol u otras drogas, por lo cual alumnos y alumnas deben comprometerse a no consumirlos en ningún momento, dentro o fuera de la escuela. Se solicita a las familias que colaboren para que sus hijos o hijas no se conviertan en consumidores de estos elementos perjudiciales para la salud y generadores de tantos trastornos sociales.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ACCESORIOS</h4>
+              <p>Hay jóvenes que suelen utilizar accesorios (algunos tipos de piercings, muñequeras, cadenas, expansores, etc.) que implican un riesgo para la seguridad y salud propia y de sus compañeros o compañeras, pero además son representativos de condicionamientos sobre los que la Escuela está fuertemente interesada en trabajar. Por lo tanto, los alumnos y alumnas convendrán no usar accesorios que no sean consensuados con la escuela y la familia, dentro ni fuera de ella. No obstante, se podrán revisar estas restricciones en todo momento a través de los mecanismos orgánicos colectivos disponibles, tales como las Asambleas.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>BOLICHES, VIDA NOCTURNA</h4>
+              <p>Los alumnos y alumnas de la Escuela se comprometerán a no asistir a pubs, boliches o lugares similares, ya que no son ambientes convenientes para adolescentes, ni son acordes a la forma de vida propuesta.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>HORARIO Y ASISTENCIA</h4>
+              <p>La Escuela considera imprescindible que alumnos y alumnas participen con regularidad y puntualidad a las actividades de la vida escolar. Se evitarán las inasistencias reiteradas y las reincorporaciones que deban gestionarse -con motivo de alcanzar la cantidad de faltas permitidas por el reglamento- se autorizarán solamente en caso de que estén debidamente justificadas por enfermedad u otras circunstancias graves que las ameriten.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>SANCIONES</h4>
+              <p>No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos. Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h4>
+              <p>Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
+
+              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUOTAS</h4>
+              <p>Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
+            </div>
+
+            {/* Bloques de Firmas */}
+            <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem 4rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+              </div>
+              <div style={{ textAlign: 'center', gridColumn: 'span 2', marginTop: '1rem' }}>
+                <div style={{ borderTop: '1px solid #000', width: '40%', margin: '0 auto 0.5rem' }}></div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Alumno/a</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}} className="no-print">
+            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate(`/admin/ficha/${id}`)}>
+              Ver Ficha Completa
+            </button>
+            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda', { state: { selectFichaId: Number(id) } })}>
+              <Calendar size={18} /> Programar Entrevista
+            </button>
+          </div>
         </div>
       </div>
     </>

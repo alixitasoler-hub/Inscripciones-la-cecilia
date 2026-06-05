@@ -563,7 +563,7 @@ const SidePanel = ({ id, token, onClose, onUpdate, onAuthError }: { id: number, 
             <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate(`/admin/ficha/${id}`)}>
               Ver Ficha Completa
             </button>
-            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda')}>
+            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda', { state: { selectFichaId: id } })}>
               <Calendar size={18} /> Programar Entrevista
             </button>
           </div>
