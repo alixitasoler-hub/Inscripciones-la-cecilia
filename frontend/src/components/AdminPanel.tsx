@@ -72,10 +72,13 @@ const AdminPanel = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-main)' }}>
         <form onSubmit={handleLogin} className="card" style={{ width: '100%', maxWidth: '400px', margin: '1rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ background: 'var(--primary)', width: '60px', height: '60px', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <span style={{ color: 'white', fontWeight: 800, fontSize: '2rem' }}>C</span>
-            </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Acceso Administrativo</h2>
+            <img 
+              src="/logo.png" 
+              alt="Logo Escuela La Cecilia" 
+              style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 1rem', display: 'block' }} 
+            />
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0.5rem 0' }}>Escuela La Cecilia</h2>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-muted)', margin: '0 0 0.5rem' }}>Acceso Administrativo</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Ingresa tus credenciales para continuar</p>
           </div>
           

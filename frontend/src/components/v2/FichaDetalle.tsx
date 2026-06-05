@@ -442,6 +442,28 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                   border-top: none;
                   padding-top: 0;
                   margin-top: 0;
+                  font-size: 0.7rem !important;
+                  line-height: 1.35 !important;
+                }
+                .acuerdo-admision h2 {
+                  font-size: 1.1rem !important;
+                  margin-bottom: 0.75rem !important;
+                }
+                .acuerdo-admision h4 {
+                  font-size: 0.75rem !important;
+                  margin-top: 0.5rem !important;
+                  margin-bottom: 0.15rem !important;
+                }
+                .acuerdo-admision p {
+                  margin-bottom: 0.3rem !important;
+                }
+                .evitar-quiebre {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                .firmas-block {
+                  margin-top: 2rem !important;
+                  gap: 1.5rem 3rem !important;
                 }
               }
             `}</style>
@@ -477,18 +499,24 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
               <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>HORARIO Y ASISTENCIA</h4>
               <p>La Escuela considera imprescindible que alumnos y alumnas participen con regularidad y puntualidad a las actividades de la vida escolar. Se evitarán las inasistencias reiteradas y las reincorporaciones que deban gestionarse -con motivo de alcanzar la cantidad de faltas permitidas por el reglamento- se autorizarán solamente en caso de que estén debidamente justificadas por enfermedad u otras circunstancias graves que las ameriten.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>SANCIONES</h4>
-              <p>No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos. Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
+              <div className="evitar-quiebre">
+                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>SANCIONES</h4>
+                <p>No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos. Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
+              </div>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h4>
-              <p>Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
+              <div className="evitar-quiebre">
+                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h4>
+                <p>Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
+              </div>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUOTAS</h4>
-              <p>Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
+              <div className="evitar-quiebre">
+                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUOTAS</h4>
+                <p>Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
+              </div>
             </div>
 
             {/* Bloques de Firmas */}
-            <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem 4rem' }}>
+            <div className="evitar-quiebre firmas-block" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem 3rem' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
