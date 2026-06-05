@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -29,6 +29,7 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
   const [notas, setNotas] = useState('');
   
   const location = useLocation();
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
@@ -202,16 +203,14 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
           display: flex;
           flex-direction: column;
           background: white;
-          overflow: hidden;
         }
 
         .calendar-header {
-          padding: 1rem 1.5rem;
+          padding: 1.5rem;
           border-bottom: 1px solid var(--border-color);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: white;
         }
 
         .calendar-content {
@@ -222,94 +221,103 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
         }
 
         .calendar-grid {
-          height: 350px;
           display: grid;
           grid-template-columns: repeat(7, 1fr);
-          overflow-y: auto;
+          flex: 1;
           border-bottom: 1px solid var(--border-color);
+          overflow-y: auto;
         }
 
         .calendar-day-col {
-          border-right: 1px solid #f1f5f9;
+          border-right: 1px solid var(--border-color);
           display: flex;
           flex-direction: column;
-          min-height: 300px;
+          min-height: 250px;
         }
 
-        .calendar-day-header {
-          padding: 0.75rem;
-          text-align: center;
-          border-bottom: 1px solid #f1f5f9;
-          background: #fcfdfe;
-          position: sticky;
-          top: 0;
-          z-index: 10;
-        }
-
-        .calendar-day-name {
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: var(--text-muted);
-          text-transform: uppercase;
-        }
-
-        .calendar-day-number {
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: var(--primary);
+        .calendar-day-col:last-child {
+          border-right: none;
         }
 
         .calendar-day-col.today {
           background: #f8fafc;
         }
 
-        .calendar-day-col.today .calendar-day-number {
+        .calendar-day-header {
+          padding: 0.75rem;
+          text-align: center;
+          border-bottom: 1px solid #f1f5f9;
+          background: #fafafa;
+        }
+
+        .calendar-day-name {
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          font-weight: 800;
+          color: var(--text-muted);
+        }
+
+        .calendar-day-number {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: var(--text-main);
+          margin-top: 0.25rem;
+          width: 32px;
+          height: 32px;
+          line-height: 32px;
+          margin: 0.25rem auto 0;
+          border-radius: 50%;
+        }
+
+        .today .calendar-day-number {
           background: var(--primary);
           color: white;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          margin: 0 auto;
         }
 
         .calendar-slots {
-          flex: 1;
           padding: 0.5rem;
+          flex: 1;
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
+          overflow-y: auto;
         }
 
         .event-card {
-          background: white;
-          border: 1px solid var(--border-color);
-          border-left: 3px solid var(--primary);
-          padding: 0.6rem;
-          border-radius: 6px;
-          font-size: 0.75rem;
+          background: var(--primary-soft);
+          border-left: 4px solid var(--primary);
+          padding: 0.5rem;
+          border-radius: 4px;
+          font-size: 0.7rem;
           box-shadow: var(--shadow-sm);
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .event-card:hover {
+          transform: translateY(-1px);
+          box-shadow: var(--shadow-md);
+          border-left-color: var(--accent);
+          background: #f1f5f9;
         }
 
         .event-card-time {
           font-weight: 800;
           color: var(--primary);
-          font-size: 0.65rem;
-          margin-bottom: 0.2rem;
+          margin-bottom: 0.25rem;
         }
 
         .upcoming-section {
-          padding: 1.5rem;
           background: #f8fafc;
+          padding: 1.5rem;
+          max-height: 250px;
           overflow-y: auto;
-          flex: 1;
+          border-top: 1px solid var(--border-color);
         }
 
         .upcoming-title {
-          font-size: 0.75rem;
           font-weight: 800;
+          font-size: 0.85rem;
           text-transform: uppercase;
           color: var(--text-muted);
           margin-bottom: 1rem;
@@ -320,31 +328,38 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
 
         .upcoming-list {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
           gap: 1rem;
         }
 
         .upcoming-item {
           background: white;
-          padding: 1rem;
-          border-radius: var(--radius-md);
           border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+          padding: 0.75rem 1rem;
           display: flex;
           align-items: center;
           gap: 1rem;
-          transition: transform 0.2s;
+          transition: all 0.2s ease;
+          cursor: pointer;
         }
 
         .upcoming-item:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-md);
+          border-color: var(--primary);
+          box-shadow: var(--shadow-sm);
+          transform: translateY(-1px);
         }
 
         .upcoming-date-box {
+          background: #f1f5f9;
+          border-radius: 8px;
+          width: 50px;
+          height: 50px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           text-align: center;
-          min-width: 50px;
-          padding-right: 1rem;
-          border-right: 1px solid #f1f5f9;
         }
 
         .modal-overlay {
@@ -455,7 +470,11 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                   </div>
                   <div className="calendar-slots">
                     {dayEvents.map(ev => (
-                      <div key={ev.id} className="event-card">
+                      <div 
+                        key={ev.id} 
+                        className="event-card" 
+                        onClick={() => navigate(`/admin/ficha/${ev.ficha_id}`)}
+                      >
                         <div className="event-card-time">{new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</div>
                         <div style={{ fontWeight: 700 }}>{ev.alumno_apellido}</div>
                         <div style={{ fontSize: '0.6rem', opacity: 0.7 }}>{ev.notas || 'Sin notas'}</div>
@@ -469,13 +488,17 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
 
           <div className="upcoming-section">
             <div className="upcoming-title">
-              <Clock size={14} /> Próximas Entrevistas Agendadas
+              <Clock size={14} /> Próximas Entrevistas Agendadas (Haz clic para editar en su ficha)
             </div>
             <div className="upcoming-list">
               {upcomingInterviews.map(ev => {
                 const date = new Date(ev.fecha_hora);
                 return (
-                  <div key={ev.id} className="upcoming-item">
+                  <div 
+                    key={ev.id} 
+                    className="upcoming-item"
+                    onClick={() => navigate(`/admin/ficha/${ev.ficha_id}`)}
+                  >
                     <div className="upcoming-date-box">
                       <div style={{fontSize:'0.6rem', textTransform:'uppercase', fontWeight:800, color:'var(--text-muted)'}}>{date.toLocaleString('es-AR', { month: 'short' })}</div>
                       <div style={{fontSize:'1.25rem', fontWeight:800, color:'var(--primary)'}}>{date.getDate()}</div>
@@ -488,7 +511,8 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                     <button 
                       className="btn btn-ghost" 
                       style={{padding:'0.5rem'}}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const dateStr = new Date(ev.fecha_hora).toLocaleDateString('es-AR');
                         const timeStr = new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
                         const text = `¡Hola, ${ev.contacto_entrevista_nombre}! Hemos recibido la solicitud para el ingreso de *${ev.alumno_apellido}, ${ev.alumno_nombre}* a nuestra Escuela.\nLes proponemos asistir junto con ${ev.alumno_nombre} el día *${dateStr}* a las *${timeStr}*.\nEsperamos tu confirmación para agendar la entrevista o, si fuera necesario, cambiarla para otro día/hora.\n¡Gracias por contactarnos!`;
@@ -500,46 +524,61 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                   </div>
                 );
               })}
-              {upcomingInterviews.length === 0 && (
-                <div style={{gridColumn:'1 / -1', textAlign:'center', padding:'2rem', color:'var(--text-muted)'}}>
-                  No hay entrevistas próximas programadas.
+            </div>
+          </div>
+        </div>
+
+        {showModal && (
+          <div className="modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>Agendar Turno</h3>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Familia seleccionada</label>
+                <div style={{ fontWeight: 700, padding: '0.5rem', background: 'var(--primary-soft)', borderRadius: '4px' }}>
+                  {selectedFicha?.apellido}, {selectedFicha?.nombre}
                 </div>
-              )}
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Fecha</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={scheduleDate}
+                  onChange={e => setScheduleDate(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Hora</label>
+                <input 
+                  type="time" 
+                  className="form-input" 
+                  value={scheduleTime}
+                  onChange={e => setScheduleTime(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label">Notas / Observaciones</label>
+                <textarea 
+                  className="form-textarea" 
+                  rows={3}
+                  value={notas}
+                  onChange={e => setNotas(e.target.value)}
+                  placeholder="Ej: Entrevista presencial con los dos padres..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={handleSchedule}>Confirmar Turno</button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </section>
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-card animate-in">
-            <h3 style={{ marginBottom: '1.5rem' }}>Agendar Entrevista</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Alumno: <strong>{selectedFicha?.apellido}, {selectedFicha?.nombre}</strong>
-            </p>
-            
-            <div className="form-group">
-              <label className="form-label">Fecha</label>
-              <input type="date" className="form-input" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
-            </div>
-            
-            <div className="form-group" style={{ marginTop: '1rem' }}>
-              <label className="form-label">Hora</label>
-              <input type="time" className="form-input" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
-            </div>
-            
-            <div className="form-group" style={{ marginTop: '1rem' }}>
-              <label className="form-label">Notas (opcional)</label>
-              <textarea className="form-textarea" rows={2} value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: Traer boletín..." />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSchedule}>Confirmar Turno</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

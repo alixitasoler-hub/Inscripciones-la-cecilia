@@ -29,6 +29,113 @@ const InputEdit: React.FC<InputEditProps> = ({ campo, label, fichaEdit, setFicha
   </div>
 );
 
+const RescheduleForm = ({ ev, token, onUpdate }: { ev: any; token: string; onUpdate: () => void }) => {
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(new Date(ev.fecha_hora).toISOString().split('T')[0]);
+  const [time, setTime] = useState(new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+  const [notas, setNotas] = useState(ev.notas || '');
+  const [estado, setEstado] = useState(ev.estado || 'programada');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/entrevistas/${ev.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          fecha_hora: `${date}T${time}:00`,
+          notas,
+          estado
+        })
+      });
+      if (!res.ok) throw new Error('Error al reprogramar');
+      alert('Entrevista actualizada con éxito');
+      setEditing(false);
+      onUpdate();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('¿Seguro que deseas eliminar permanentemente esta entrevista?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/entrevistas/${ev.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al eliminar');
+      alert('Entrevista eliminada');
+      onUpdate();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Fecha</label>
+            <input type="date" className="form-input" style={{ fontSize: '0.85rem', padding: '0.3rem' }} value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Hora</label>
+            <input type="time" className="form-input" style={{ fontSize: '0.85rem', padding: '0.3rem' }} value={time} onChange={e => setTime(e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notas</label>
+          <input type="text" className="form-input" style={{ fontSize: '0.85rem', padding: '0.3rem' }} value={notas} onChange={e => setNotas(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Estado</label>
+          <select className="form-input" style={{ fontSize: '0.85rem', padding: '0.3rem' }} value={estado} onChange={e => setEstado(e.target.value)}>
+            <option value="programada">Programada</option>
+            <option value="realizada">Realizada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+          <button className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={() => setEditing(false)}>
+            Cancelar
+          </button>
+          <button className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', color: 'var(--error)', marginLeft: 'auto' }} onClick={handleDelete}>
+            Eliminar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const dateObj = new Date(ev.fecha_hora);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: ev.estado === 'cancelada' ? 'var(--error)' : 'var(--accent)', textTransform: 'uppercase' }}>
+          {ev.estado || 'programada'}
+        </div>
+        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+          {dateObj.toLocaleDateString('es-AR')} a las {dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+        </div>
+        {ev.notas && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Nota: {ev.notas}</div>}
+      </div>
+      <div className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={() => setEditing(true)}>
+          Reprogramar
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: '#64748B' },
   contactado: { label: 'Contactado', color: '#F59E0B' },
@@ -139,7 +246,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
   if (!data) return null;
 
-  const { ficha, escolaridad = [], padres = [], hermanos = [], convivientes = [] } = data;
+  const { ficha, escolaridad = [], padres = [], hermanos = [], convivientes = [], entrevistas = [] } = data;
   const estado = ESTADO_LABELS[ficha.estado] || { label: ficha.estado, color: '#64748B' };
 
   return (
@@ -556,6 +663,35 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             </div>
           </Seccion>
 
+          {/* Turnos de Entrevista */}
+          <Seccion title="Turnos de Entrevista" icon={<Calendar size={16} />}>
+            {entrevistas.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {entrevistas.map((ev: any) => {
+                  const isCancelada = ev.estado === 'cancelada';
+                  return (
+                    <div 
+                      key={ev.id} 
+                      style={{ 
+                        background: '#f8fafc', 
+                        borderRadius: '12px', 
+                        padding: '1.25rem', 
+                        border: '1px solid var(--border-color)',
+                        opacity: isCancelada ? 0.6 : 1
+                      }}
+                    >
+                      <RescheduleForm ev={ev} token={token} onUpdate={fetchFicha} />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                No hay entrevistas programadas para este alumno.
+              </div>
+            )}
+          </Seccion>
+
           {/* Acuerdo de Admisión y Permanencia (Completo en la vista de impresión) */}
           <div className="acuerdo-admision" style={{ marginTop: '3rem', borderTop: '2px dashed var(--border-color)', paddingTop: '2.5rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -564,7 +700,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             <div style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--text-main)', textAlign: 'justify' }}>
               <p>Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción, contando siempre con la posibilidad de efectuar las consultas que consideren necesarias.</p>
               <p>No se considera que exista un alumno o alumna fuera y otro u otra dentro de la Escuela, por lo cual se espera una conducta coherente del alumnado con los principios de la misma, en cualquier ámbito en que se encuentren.</p>
-              <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
+              <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras actions. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
               
               <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ADMISIÓN</h4>
               <p>La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones. Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
