@@ -117,10 +117,10 @@ const AdminPanel = () => {
       <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>}>
         <Routes>
           <Route path="/" element={<KanbanBoard token={token} onAuthError={handleLogout} />} />
-          <Route path="/ficha/:id" element={<FichaDetalle token={token} onAuthError={handleLogout} />} />
-          <Route path="/agenda" element={<SplitAgenda token={token} onAuthError={handleLogout} />} />
-          <Route path="/metricas" element={<MetricsDashboard token={token} onAuthError={handleLogout} />} />
-          <Route path="/usuarios" element={<UserManagement token={token} onAuthError={handleLogout} />} />
+          <Route path="ficha/:id" element={<FichaDetalle token={token} onAuthError={handleLogout} />} />
+          <Route path="agenda" element={<SplitAgenda token={token} onAuthError={handleLogout} />} />
+          <Route path="metricas" element={<MetricsDashboard token={token} onAuthError={handleLogout} />} />
+          <Route path="usuarios" element={<UserManagement token={token} onAuthError={handleLogout} />} />
         </Routes>
       </React.Suspense>
     </AdminPanelV2>
