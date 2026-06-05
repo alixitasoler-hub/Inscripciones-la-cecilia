@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   CalendarDays, 
@@ -11,9 +11,6 @@ interface AdminPanelV2Props {
   token: string;
   onAuthError: () => void;
   user: any;
-  // El contenido de la sección activa se pasa como children
-  // Este componente es solo el layout (sidebar + área de contenido)
-  // Las rutas se manejan en AdminPanel.tsx — sin <Routes> anidados
   children: React.ReactNode;
 }
 
@@ -49,6 +46,11 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ onAuthError, user, children
           gap: 1rem;
           padding-bottom: 1.5rem;
           border-bottom: 1px solid var(--border-color);
+          text-decoration: none;
+        }
+
+        .v2-sidebar-header:hover {
+          opacity: 0.9;
         }
 
         .v2-nav {
@@ -158,10 +160,12 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ onAuthError, user, children
       `}</style>
 
       <aside className="v2-sidebar">
-        <div className="v2-sidebar-header">
-          <div style={{ background: 'var(--primary)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, flexShrink: 0 }}>C</div>
+        <Link to="/admin" className="v2-sidebar-header">
+          <div style={{ background: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', padding: '2px', flexShrink: 0 }}>
+            <img src="/logo.png" alt="Escuela La Cecilia" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)' }}>La Cecilia <span className="v2-badge-beta">Panel Pro</span></div>
-        </div>
+        </Link>
 
         <nav className="v2-nav">
           <div className="v2-nav-group">Gestión de Admisión</div>

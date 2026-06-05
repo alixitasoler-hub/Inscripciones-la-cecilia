@@ -133,7 +133,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
     <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--error)' }}>
       <div style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Error al cargar la ficha</div>
       <div style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{error}</div>
-      <button className="btn btn-outline" onClick={() => navigate(-1)}>Volver</button>
+      <button className="btn btn-outline" onClick={() => navigate('/admin')}>Volver</button>
     </div>
   );
 
@@ -147,22 +147,45 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
       {/* Estilos de impresión */}
       <style>{`
         @media print {
-          .no-print, .v2-sidebar { display: none !important; }
+          /* Hide sidebars, buttons, headers, footers and navigation controls */
+          .no-print, 
+          [class*="no-print"], 
+          button, 
+          .btn, 
+          .v2-sidebar, 
+          .v2-user-profile { 
+            display: none !important; 
+            visibility: hidden !important; 
+            height: 0 !important; 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            opacity: 0 !important; 
+          }
+          
           .v2-layout { display: block !important; }
           .v2-content { max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; }
-          body { background: white !important; color: black !important; font-family: sans-serif; font-size: 8.5pt !important; line-height: 1.25 !important; }
           
+          /* Set page margins to zero to hide browser native headers/footers */
           @page {
             size: A4;
-            margin: 10mm 12mm !important;
+            margin: 0 !important;
+          }
+          
+          body { 
+            background: white !important; 
+            color: black !important; 
+            font-family: sans-serif; 
+            font-size: 8pt !important; 
+            line-height: 1.25 !important;
+            padding: 12mm 15mm !important; /* Add padding to body to compensate for zero margin */
           }
           
           .ficha-detalle-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
           .ficha-detalle-container > div { padding: 0 !important; border: none !important; box-shadow: none !important; background: transparent !important; }
           
           .ficha-detalle-container > div:first-of-type {
-            padding: 0.75rem !important;
-            margin-bottom: 1rem !important;
+            padding: 0.5rem 0.75rem !important;
+            margin-bottom: 0.75rem !important;
             background: #f8fafc !important;
             color: black !important;
             border: 1px solid #e2e8f0 !important;
@@ -172,11 +195,11 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             align-items: center !important;
           }
           .ficha-detalle-container > div:first-of-type img {
-            height: 50px !important;
-            width: 50px !important;
+            height: 40px !important;
+            width: 40px !important;
           }
           .ficha-detalle-container > div:first-of-type h1 {
-            font-size: 1.3rem !important;
+            font-size: 1.2rem !important;
             color: black !important;
             margin: 0 !important;
           }
@@ -184,11 +207,23 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           div[style*="gridTemplateColumns"] {
             display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.4rem 1rem !important;
+            gap: 0.3rem 0.75rem !important;
           }
           
           div[style*="marginBottom: '2rem'"] {
-            margin-bottom: 1rem !important;
+            margin-bottom: 0.75rem !important;
+          }
+          
+          /* Prevent widows and orphans in paragraphs, lists and tables */
+          p, li, tr, table {
+            orphans: 3 !important;
+            widows: 3 !important;
+          }
+          h1, h2, h3, h4, h5, h6 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           
           .acuerdo-admision {
@@ -196,26 +231,26 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             border-top: none !important;
             padding-top: 0 !important;
             margin-top: 0 !important;
-            font-size: 8px !important;
+            font-size: 7.5px !important;
             line-height: 1.2 !important;
             color: #000 !important;
           }
           .acuerdo-admision h2 {
-            font-size: 10pt !important;
+            font-size: 9.5pt !important;
             font-weight: 800 !important;
-            margin-bottom: 0.5rem !important;
+            margin-bottom: 0.4rem !important;
             color: #000 !important;
             text-align: center !important;
           }
           .acuerdo-admision h4 {
-            font-size: 8pt !important;
+            font-size: 7.5pt !important;
             font-weight: 800 !important;
-            margin-top: 0.35rem !important;
+            margin-top: 0.3rem !important;
             margin-bottom: 0.05rem !important;
             color: #000 !important;
           }
           .acuerdo-admision p {
-            margin-bottom: 0.2rem !important;
+            margin-bottom: 0.18rem !important;
             text-align: justify !important;
           }
           
@@ -225,8 +260,8 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           }
           
           .firmas-block {
-            margin-top: 1.5rem !important;
-            gap: 1.5rem 2.5rem !important;
+            margin-top: 1.2rem !important;
+            gap: 1.2rem 2rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
@@ -240,7 +275,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
       <div className="ficha-detalle-container animate-in">
         {/* Barra superior */}
         <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <button className="btn btn-ghost" onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ArrowLeft size={18} /> Volver
           </button>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -592,7 +627,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           </div>
 
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}} className="no-print">
-            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate(`/admin/ficha/${id}`)}>
+            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate('/admin')}>
               Ver Ficha Completa
             </button>
             <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda', { state: { selectFichaId: Number(id) } })}>

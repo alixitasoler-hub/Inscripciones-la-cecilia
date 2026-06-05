@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import AdminPanelV2 from './v2/AdminPanelV2';
 import KanbanBoard from './v2/KanbanBoard';
 import SplitAgenda from './v2/SplitAgenda';
@@ -17,6 +17,7 @@ const AdminPanel = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token');
@@ -48,6 +49,7 @@ const AdminPanel = () => {
         setToken(data.token);
         setUser(data.user);
         setIsAuthenticated(true);
+        navigate('/admin');
       } else {
         setError(data.error || 'Credenciales incorrectas o error en el servidor');
       }
