@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Edit3, Save, X, User, Users, BookOpen, Heart, Home, Calendar } from 'lucide-react';
+import { ArrowLeft, Printer, Edit3, Save, X, User, Users, BookOpen, Heart, Home, Calendar, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inscripciones.alixitasoler.workers.dev/api';
 
@@ -75,6 +75,22 @@ const RescheduleForm = ({ ev, token, onUpdate }: { ev: any; token: string; onUpd
     }
   };
 
+  const handleCancelDirect = async () => {
+    if (!confirm('¿Seguro que deseas cancelar esta entrevista?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/entrevistas/${ev.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ estado: 'cancelada' })
+      });
+      if (!res.ok) throw new Error('Error al cancelar');
+      alert('Entrevista cancelada');
+      onUpdate();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   if (editing) {
     return (
       <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -128,6 +144,15 @@ const RescheduleForm = ({ ev, token, onUpdate }: { ev: any; token: string; onUpd
         {ev.notas && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Nota: {ev.notas}</div>}
       </div>
       <div className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
+        {ev.estado !== 'cancelada' && (
+          <button 
+            className="btn btn-outline" 
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', color: 'var(--error)', borderColor: 'var(--error)' }} 
+            onClick={handleCancelDirect}
+          >
+            Cancelar Turno
+          </button>
+        )}
         <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={() => setEditing(true)}>
           Reprogramar
         </button>
@@ -225,6 +250,25 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
       alert('Error al guardar: ' + e.message);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleDeleteFicha = async () => {
+    if (!confirm(`¿Seguro que deseas eliminar permanentemente la solicitud de ${ficha.nombre} ${ficha.apellido}? Esta acción no se puede deshacer y borrará todos los datos relacionados.`)) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/fichas/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
+      if (!res.ok) throw new Error('Error al eliminar la ficha');
+      alert('Solicitud eliminada con éxito');
+      navigate('/admin');
+    } catch (e: any) {
+      alert(e.message);
     }
   };
 
@@ -411,6 +455,9 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
               </>
             ) : (
               <>
+                <button className="btn btn-ghost" style={{ color: 'var(--error)', borderColor: 'var(--error)' }} onClick={handleDeleteFicha}>
+                  <Trash2 size={16} /> Eliminar Solicitud
+                </button>
                 <button className="btn btn-outline" onClick={handlePrint}>
                   <Printer size={16} /> Imprimir
                 </button>
