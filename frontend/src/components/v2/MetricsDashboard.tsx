@@ -16,7 +16,7 @@ interface MetricsProps {
   onAuthError: () => void;
 }
 
-const MetricsDashboard: React.FC<MetricsProps> = ({ token }) => {
+const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +25,10 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token }) => {
       const res = await fetch(`${API_URL}/admin/metrics`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // if (res.status === 401) return onAuthError();
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       if (!res.ok) throw new Error('Backend failed');
       const result = await res.json();
       setData(result);
@@ -53,6 +56,10 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token }) => {
       const res = await fetch(`${API_URL}/admin/fichas`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       const fichas = await res.json();
       
       if (!fichas.length) return alert('No hay datos para exportar');
@@ -194,7 +201,7 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token }) => {
       <div className="metrics-header">
         <div>
           <h1 style={{fontSize:'1.75rem', marginBottom:'0.5rem'}}>Métricas e Informes</h1>
-          <p style={{color:'var(--text-muted)'}}>Estado general del proceso de admisión y auditoría de cambios.</p>
+          <p style={{color:'var(--text-muted)'}}>Estado general del proceso de admisión and auditoría de cambios.</p>
         </div>
         <button className="btn btn-primary" onClick={exportCSV}>
           <Download size={18} /> Exportar Base Completa (CSV)

@@ -14,7 +14,7 @@ interface UserManagementProps {
   onAuthError: () => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ token, onAuthError }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState<any | null>(null);
@@ -26,7 +26,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
       const res = await fetch(`${API_URL}/admin/usuarios`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // if (res.status === 401) return onAuthError();
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       if (!res.ok) throw new Error('Backend failed');
       const data = await res.json();
       setUsers(data);
@@ -57,6 +60,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(formData)
       });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       if (res.ok) {
         setFormData({ usuario: '', password: '', nombre: '', rol: 'admin' });
         setEditMode(null);
@@ -74,11 +81,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
 
   const handleToggleStatus = async (u: any) => {
     try {
-      await fetch(`${API_URL}/admin/usuarios/${u.id}`, {
+      const res = await fetch(`${API_URL}/admin/usuarios/${u.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ activo: !u.activo })
       });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       fetchUsers();
     } catch (e) { alert('Error'); }
   };
@@ -86,10 +97,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   const handleDelete = async (id: number) => {
     if (!confirm('¿Eliminar este usuario permanentemente?')) return;
     try {
-      await fetch(`${API_URL}/admin/usuarios/${id}`, { 
+      const res = await fetch(`${API_URL}/admin/usuarios/${id}`, { 
         method: 'DELETE', 
         headers: { 'Authorization': `Bearer ${token}` } 
       });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       fetchUsers();
     } catch (e) { alert('Error'); }
   };

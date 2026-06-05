@@ -16,7 +16,7 @@ interface SplitAgendaProps {
   onAuthError: () => void;
 }
 
-const SplitAgenda: React.FC<SplitAgendaProps> = ({ token }) => {
+const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
   const [fichas, setFichas] = useState<any[]>([]);
   const [entrevistas, setEntrevistas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,8 +34,10 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token }) => {
         fetch(`${API_URL}/admin/agenda`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      // Comentado para evitar deslogueos innecesarios si la API falla
-      // if (resFichas.status === 401 || resAgenda.status === 401) return onAuthError();
+      if (resFichas.status === 401 || resAgenda.status === 401) {
+        onAuthError();
+        return;
+      }
       if (!resFichas.ok || !resAgenda.ok) throw new Error('Error backend');
 
       const [dataFichas, dataAgenda] = await Promise.all([resFichas.json(), resAgenda.json()]);
@@ -94,6 +96,11 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token }) => {
           notas
         })
       });
+
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Error al agendar');

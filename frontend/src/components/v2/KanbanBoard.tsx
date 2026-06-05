@@ -29,7 +29,7 @@ const STAGES = [
   { id: 'cancelado', title: 'Cancelados / Bajas', color: '#EF4444' }
 ];
 
-const KanbanBoard: React.FC<PipelineProps> = ({ token }) => {
+const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
   const [fichas, setFichas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -45,7 +45,12 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token }) => {
         headers: { 'Authorization': `Bearer ${token}` },
         cache: 'no-store'
       });
-      // Si la API falla o da 401, no deslogueamos al usuario (para evitar sacarlo de la UI)
+      
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
+      
       if (!res.ok) throw new Error(`Backend error: ${res.status}`);
       
       const data = await res.json();
@@ -406,13 +411,14 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token }) => {
           token={token} 
           onClose={() => setSelectedFichaId(null)} 
           onUpdate={fetchFichas}
+          onAuthError={onAuthError}
         />
       )}
     </div>
   );
 };
 
-const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string, onClose: () => void, onUpdate: () => void }) => {
+const SidePanel = ({ id, token, onClose, onUpdate, onAuthError }: { id: number, token: string, onClose: () => void, onUpdate: () => void, onAuthError: () => void }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -421,6 +427,10 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
     setLoading(true);
     fetch(`${API_URL}/admin/fichas/${id}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => {
+        if (res.status === 401) {
+          onAuthError();
+          throw new Error('Sesión expirada');
+        }
         if (!res.ok) throw new Error('API Error');
         return res.json();
       })
@@ -429,6 +439,7 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
         setLoading(false); 
       })
       .catch(e => {
+        if (e.message === 'Sesión expirada') return;
         console.error('Error fetching details, cargando datos de prueba:', e);
         setData({
           ficha: {
@@ -468,6 +479,10 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ estado: newStatus })
       });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to move');
       onUpdate();
     } catch (e) {
@@ -559,4 +574,3 @@ const SidePanel = ({ id, token, onClose, onUpdate }: { id: number, token: string
 };
 
 export default KanbanBoard;
-
