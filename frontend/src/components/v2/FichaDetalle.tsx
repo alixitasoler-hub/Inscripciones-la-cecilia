@@ -251,10 +251,27 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
   return (
     <>
-      {/* Estilos de impresión */}
+      {/* Estilos de impresión y visibilidad */}
       <style>{`
+        /* Ocultar el acuerdo en pantalla por defecto */
+        .acuerdo-admision {
+          display: none !important;
+        }
+
         @media print {
-          /* Hide sidebars, buttons, headers, footers and navigation controls */
+          /* Mostrar el acuerdo únicamente al imprimir */
+          .acuerdo-admision {
+            display: block !important;
+            page-break-before: always;
+            border-top: none !important;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            font-size: 7.2pt !important;
+            line-height: 1.25 !important;
+            color: #000 !important;
+          }
+
+          /* Ocultar botones, sidebars, perfiles y controles de navegación */
           .no-print, 
           [class*="no-print"], 
           button, 
@@ -272,19 +289,19 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           .v2-layout { display: block !important; }
           .v2-content { max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; }
           
-          /* Set page margins to zero to hide browser native headers/footers */
+          /* Margen de página estándar profesional */
           @page {
             size: A4;
-            margin: 0 !important;
+            margin: 12mm 15mm !important;
           }
           
           body { 
             background: white !important; 
             color: black !important; 
             font-family: sans-serif; 
-            font-size: 8pt !important; 
-            line-height: 1.25 !important;
-            padding: 12mm 15mm !important; /* Add padding to body to compensate for zero margin */
+            font-size: 8.5pt !important; 
+            line-height: 1.3 !important;
+            padding: 0 !important;
           }
           
           .ficha-detalle-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
@@ -314,34 +331,31 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           div[style*="gridTemplateColumns"] {
             display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.3rem 0.75rem !important;
+            gap: 0.35rem 0.75rem !important;
           }
           
           div[style*="marginBottom: '2rem'"] {
             margin-bottom: 0.75rem !important;
           }
           
-          /* Prevent widows and orphans in paragraphs, lists and tables */
+          /* Control de viudas y huérfanas en párrafos, listados y tablas */
           p, li, tr, table {
             orphans: 3 !important;
             widows: 3 !important;
           }
-          h1, h2, h3, h4, h5, h6 {
+          h1, h2, h3, h4, h5, h6, .Seccion-title {
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
-          
-          .acuerdo-admision {
-            page-break-before: always;
-            border-top: none !important;
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-            font-size: 7.5px !important;
-            line-height: 1.2 !important;
-            color: #000 !important;
+
+          /* Evitar que se rompan las secciones de campos a la mitad */
+          div[style*="marginBottom: '2rem'"], .Seccion-title + div {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
+          
           .acuerdo-admision h2 {
             font-size: 9.5pt !important;
             font-weight: 800 !important;
@@ -700,7 +714,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             <div style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--text-main)', textAlign: 'justify' }}>
               <p>Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción, contando siempre con la posibilidad de efectuar las consultas que consideren necesarias.</p>
               <p>No se considera que exista un alumno o alumna fuera y otro u otra dentro de la Escuela, por lo cual se espera una conducta coherente del alumnado con los principios de la misma, en cualquier ámbito en que se encuentren.</p>
-              <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras actions. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
+              <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
               
               <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ADMISIÓN</h4>
               <p>La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones. Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
