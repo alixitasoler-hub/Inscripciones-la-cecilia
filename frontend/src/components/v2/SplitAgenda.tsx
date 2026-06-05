@@ -475,9 +475,9 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                         className="event-card" 
                         onClick={() => navigate(`/admin/ficha/${ev.ficha_id}`)}
                       >
-                        <div className="event-card-time">{new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</div>
+                        <div className="event-card-time">{new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })} hs</div>
                         <div style={{ fontWeight: 700 }}>{ev.alumno_apellido}</div>
-                        <div style={{ fontSize: '0.6rem', opacity: 0.7 }}>{ev.notas || 'Sin notas'}</div>
+                        <div style={{ fontSize: '0.6', opacity: 0.7 }}>{ev.notas || 'Sin notas'}</div>
                       </div>
                     ))}
                   </div>
@@ -504,7 +504,7 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                       <div style={{fontSize:'1.25rem', fontWeight:800, color:'var(--primary)'}}>{date.getDate()}</div>
                     </div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:'0.65rem', fontWeight:800, color:'var(--accent)'}}>{date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} HS</div>
+                      <div style={{fontSize:'0.65rem', fontWeight:800, color:'var(--accent)'}}>{date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })} HS</div>
                       <div style={{fontWeight:700, fontSize:'0.9rem'}}>{ev.alumno_apellido}, {ev.alumno_nombre}</div>
                       <div style={{fontSize:'0.75rem', color:'var(--text-muted)'}}>{ev.contacto_entrevista_nombre}</div>
                     </div>
@@ -514,7 +514,7 @@ const SplitAgenda: React.FC<SplitAgendaProps> = ({ token, onAuthError }) => {
                       onClick={(e) => {
                         e.stopPropagation();
                         const dateStr = new Date(ev.fecha_hora).toLocaleDateString('es-AR');
-                        const timeStr = new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                        const timeStr = new Date(ev.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
                         const text = `¡Hola, ${ev.contacto_entrevista_nombre}! Hemos recibido la solicitud para el ingreso de *${ev.alumno_apellido}, ${ev.alumno_nombre}* a nuestra Escuela.\nLes proponemos asistir junto con ${ev.alumno_nombre} el día *${dateStr}* a las *${timeStr}*.\nEsperamos tu confirmación para agendar la entrevista o, si fuera necesario, cambiarla para otro día/hora.\n¡Gracias por contactarnos!`;
                         window.open(`https://wa.me/${(ev.contacto_entrevista_dato||'').replace(/\D/g,'')}?text=${encodeURIComponent(text)}`, '_blank');
                       }}
