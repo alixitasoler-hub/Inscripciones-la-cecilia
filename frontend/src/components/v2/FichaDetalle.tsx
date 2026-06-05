@@ -9,6 +9,26 @@ interface FichaDetalleProps {
   onAuthError: () => void;
 }
 
+interface InputEditProps {
+  campo: string;
+  label: string;
+  fichaEdit: any;
+  setFichaEdit: React.Dispatch<React.SetStateAction<any>>;
+}
+
+const InputEdit: React.FC<InputEditProps> = ({ campo, label, fichaEdit, setFichaEdit }) => (
+  <div style={{ marginBottom: '1rem' }}>
+    <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</div>
+    <input
+      type="text"
+      className="form-input"
+      style={{ fontSize: '0.9rem', padding: '0.4rem 0.75rem', width: '100%' }}
+      value={fichaEdit[campo] ?? ''}
+      onChange={e => setFichaEdit({ ...fichaEdit, [campo]: e.target.value })}
+    />
+  </div>
+);
+
 const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: '#64748B' },
   contactado: { label: 'Contactado', color: '#F59E0B' },
@@ -30,7 +50,7 @@ const Campo = ({ label, value }: { label: string; value?: string | number | null
 
 const Seccion = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
   <div style={{ marginBottom: '2rem' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '2px solid var(--border-color)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '2px solid var(--border-color)' }} className="Seccion-title">
       <div style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.4rem', borderRadius: '8px', display: 'flex' }}>
         {icon}
       </div>
@@ -122,30 +142,98 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
   const { ficha, escolaridad = [], padres = [], hermanos = [], convivientes = [] } = data;
   const estado = ESTADO_LABELS[ficha.estado] || { label: ficha.estado, color: '#64748B' };
 
-  const InputEdit = ({ campo, label }: { campo: string; label: string }) => (
-    <div style={{ marginBottom: '1rem' }}>
-      <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</div>
-      <input
-        type="text"
-        className="form-input"
-        style={{ fontSize: '0.9rem', padding: '0.4rem 0.75rem' }}
-        value={fichaEdit[campo] ?? ''}
-        onChange={e => setFichaEdit({ ...fichaEdit, [campo]: e.target.value })}
-      />
-    </div>
-  );
-
   return (
     <>
       {/* Estilos de impresión */}
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-          .v2-sidebar { display: none !important; }
-          .v2-layout { grid-template-columns: 1fr !important; }
-          .v2-content { max-height: none !important; overflow: visible !important; padding: 0 !important; }
-          body { background: white !important; }
-          .ficha-detalle-container { box-shadow: none !important; border: none !important; }
+          .no-print, .v2-sidebar { display: none !important; }
+          .v2-layout { display: block !important; }
+          .v2-content { max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; }
+          body { background: white !important; color: black !important; font-family: sans-serif; font-size: 8.5pt !important; line-height: 1.25 !important; }
+          
+          @page {
+            size: A4;
+            margin: 10mm 12mm !important;
+          }
+          
+          .ficha-detalle-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+          .ficha-detalle-container > div { padding: 0 !important; border: none !important; box-shadow: none !important; background: transparent !important; }
+          
+          .ficha-detalle-container > div:first-of-type {
+            padding: 0.75rem !important;
+            margin-bottom: 1rem !important;
+            background: #f8fafc !important;
+            color: black !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+          }
+          .ficha-detalle-container > div:first-of-type img {
+            height: 50px !important;
+            width: 50px !important;
+          }
+          .ficha-detalle-container > div:first-of-type h1 {
+            font-size: 1.3rem !important;
+            color: black !important;
+            margin: 0 !important;
+          }
+          
+          div[style*="gridTemplateColumns"] {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.4rem 1rem !important;
+          }
+          
+          div[style*="marginBottom: '2rem'"] {
+            margin-bottom: 1rem !important;
+          }
+          
+          .acuerdo-admision {
+            page-break-before: always;
+            border-top: none !important;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            font-size: 8px !important;
+            line-height: 1.2 !important;
+            color: #000 !important;
+          }
+          .acuerdo-admision h2 {
+            font-size: 10pt !important;
+            font-weight: 800 !important;
+            margin-bottom: 0.5rem !important;
+            color: #000 !important;
+            text-align: center !important;
+          }
+          .acuerdo-admision h4 {
+            font-size: 8pt !important;
+            font-weight: 800 !important;
+            margin-top: 0.35rem !important;
+            margin-bottom: 0.05rem !important;
+            color: #000 !important;
+          }
+          .acuerdo-admision p {
+            margin-bottom: 0.2rem !important;
+            text-align: justify !important;
+          }
+          
+          .evitar-quiebre {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          
+          .firmas-block {
+            margin-top: 1.5rem !important;
+            gap: 1.5rem 2.5rem !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .firmas-block div {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
         }
       `}</style>
 
@@ -215,21 +303,21 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           <Seccion title="Datos del Alumno" icon={<User size={16} />}>
             {editando ? (
               <Grid cols={3}>
-                <InputEdit campo="nombre" label="Nombre" />
-                <InputEdit campo="apellido" label="Apellido" />
-                <InputEdit campo="dni_nro" label="DNI Nro" />
-                <InputEdit campo="sexo" label="Sexo" />
-                <InputEdit campo="fecha_nac" label="Fecha de Nacimiento" />
-                <InputEdit campo="lugar_nac" label="Lugar de Nacimiento" />
-                <InputEdit campo="direccion" label="Dirección" />
-                <InputEdit campo="localidad" label="Localidad" />
-                <InputEdit campo="provincia" label="Provincia" />
-                <InputEdit campo="pais" label="País" />
-                <InputEdit campo="cp" label="Código Postal" />
-                <InputEdit campo="telefono_alumno" label="Teléfono Alumno" />
-                <InputEdit campo="email_alumno" label="Email Alumno" />
-                <InputEdit campo="obra_social" label="Obra Social" />
-                <InputEdit campo="otras_actividades" label="Otras Actividades" />
+                <InputEdit campo="nombre" label="Nombre" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="apellido" label="Apellido" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="dni_nro" label="DNI Nro" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="sexo" label="Sexo" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="fecha_nac" label="Fecha de Nacimiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="lugar_nac" label="Lugar de Nacimiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="direccion" label="Dirección" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="localidad" label="Localidad" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="provincia" label="Provincia" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="pais" label="País" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="cp" label="Código Postal" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="telefono_alumno" label="Teléfono Alumno" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="email_alumno" label="Email Alumno" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="obra_social" label="Obra Social" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="otras_actividades" label="Otras Actividades" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
@@ -256,12 +344,12 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           <Seccion title="Información Escolar" icon={<BookOpen size={16} />}>
             {editando ? (
               <Grid cols={3}>
-                <InputEdit campo="nivel_ingreso" label="Nivel de Ingreso" />
-                <InputEdit campo="grado_anio" label="Grado / Año" />
-                <InputEdit campo="ciclo_lectivo" label="Ciclo Lectivo" />
-                <InputEdit campo="repitente" label="Repitente (si/no)" />
-                <InputEdit campo="motivo_eleccion" label="Motivo de Elección" />
-                <InputEdit campo="problemas_aprendizaje" label="Problemas de Aprendizaje" />
+                <InputEdit campo="nivel_ingreso" label="Nivel de Ingreso" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="grado_anio" label="Grado / Año" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="ciclo_lectivo" label="Ciclo Lectivo" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="repitente" label="Repitente (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="motivo_eleccion" label="Motivo de Elección" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="problemas_aprendizaje" label="Problemas de Aprendizaje" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
@@ -304,10 +392,10 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           <Seccion title="Salud" icon={<Heart size={16} />}>
             {editando ? (
               <Grid cols={2}>
-                <InputEdit campo="salud_detalles" label="Detalles de Salud" />
-                <InputEdit campo="embarazo_parto" label="Embarazo / Parto" />
-                <InputEdit campo="discapacidad" label="Discapacidad" />
-                <InputEdit campo="tiene_cud" label="Tiene CUD (si/no)" />
+                <InputEdit campo="salud_detalles" label="Detalles de Salud" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="embarazo_parto" label="Embarazo / Parto" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="discapacidad" label="Discapacidad" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tiene_cud" label="Tiene CUD (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={2}>
@@ -400,11 +488,11 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           <Seccion title="Información Administrativa" icon={<User size={16} />}>
             {editando ? (
               <Grid cols={3}>
-                <InputEdit campo="contacto_entrevista_nombre" label="Contacto Entrevista - Nombre" />
-                <InputEdit campo="contacto_entrevista_medio" label="Contacto Entrevista - Medio" />
-                <InputEdit campo="contacto_entrevista_dato" label="Contacto Entrevista - Dato" />
-                <InputEdit campo="situacion_socioeconomica" label="Situación Socioeconómica" />
-                <InputEdit campo="otros_datos" label="Otros Datos" />
+                <InputEdit campo="contacto_entrevista_nombre" label="Contacto Entrevista - Nombre" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="contacto_entrevista_medio" label="Contacto Entrevista - Medio" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="contacto_entrevista_dato" label="Contacto Entrevista - Dato" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="situacion_socioeconomica" label="Situación Socioeconómica" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="otros_datos" label="Otros Datos" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
@@ -435,38 +523,6 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
           {/* Acuerdo de Admisión y Permanencia (Completo en la vista de impresión) */}
           <div className="acuerdo-admision" style={{ marginTop: '3rem', borderTop: '2px dashed var(--border-color)', paddingTop: '2.5rem' }}>
-            <style>{`
-              @media print {
-                .acuerdo-admision {
-                  page-break-before: always;
-                  border-top: none;
-                  padding-top: 0;
-                  margin-top: 0;
-                  font-size: 0.7rem !important;
-                  line-height: 1.35 !important;
-                }
-                .acuerdo-admision h2 {
-                  font-size: 1.1rem !important;
-                  margin-bottom: 0.75rem !important;
-                }
-                .acuerdo-admision h4 {
-                  font-size: 0.75rem !important;
-                  margin-top: 0.5rem !important;
-                  margin-bottom: 0.15rem !important;
-                }
-                .acuerdo-admision p {
-                  margin-bottom: 0.3rem !important;
-                }
-                .evitar-quiebre {
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                }
-                .firmas-block {
-                  margin-top: 2rem !important;
-                  gap: 1.5rem 3rem !important;
-                }
-              }
-            `}</style>
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--secondary)' }}>ACUERDO DE ADMISIÓN Y PERMANENCIA</h2>
             </div>
