@@ -425,8 +425,8 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           }
           
           .firmas-block {
-            margin-top: 1.2rem !important;
-            gap: 1.2rem 2rem !important;
+            margin-top: 4.5rem !important;
+            gap: 2.5rem 2rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
@@ -725,33 +725,35 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           </Seccion>
 
           {/* Turnos de Entrevista */}
-          <Seccion title="Turnos de Entrevista" icon={<Calendar size={16} />}>
-            {entrevistas.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {entrevistas.map((ev: any) => {
-                  const isCancelada = ev.estado === 'cancelada';
-                  return (
-                    <div 
-                      key={ev.id} 
-                      style={{ 
-                        background: '#f8fafc', 
-                        borderRadius: '12px', 
-                        padding: '1.25rem', 
-                        border: '1px solid var(--border-color)',
-                        opacity: isCancelada ? 0.6 : 1
-                      }}
-                    >
-                      <RescheduleForm ev={ev} token={token} onUpdate={fetchFicha} />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                No hay entrevistas programadas para este alumno.
-              </div>
-            )}
-          </Seccion>
+          <div className="no-print">
+            <Seccion title="Turnos de Entrevista" icon={<Calendar size={16} />}>
+              {entrevistas.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {entrevistas.map((ev: any) => {
+                    const isCancelada = ev.estado === 'cancelada';
+                    return (
+                      <div 
+                        key={ev.id} 
+                        style={{ 
+                          background: '#f8fafc', 
+                          borderRadius: '12px', 
+                          padding: '1.25rem', 
+                          border: '1px solid var(--border-color)',
+                          opacity: isCancelada ? 0.6 : 1
+                        }}
+                      >
+                        <RescheduleForm ev={ev} token={token} onUpdate={fetchFicha} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                  No hay entrevistas programadas para este alumno.
+                </div>
+              )}
+            </Seccion>
+          </div>
 
           {/* Acuerdo de Admisión y Permanencia (Completo en la vista de impresión) */}
           <div className="acuerdo-admision" style={{ marginTop: '3rem', borderTop: '2px dashed var(--border-color)', paddingTop: '2.5rem' }}>
@@ -805,17 +807,17 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
             {/* Bloques de Firmas */}
             <div className="evitar-quiebre firmas-block" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem 3rem' }}>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
                 <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
                 <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
               </div>
-              <div style={{ textAlign: 'center', gridColumn: 'span 2', marginTop: '1rem' }}>
+              <div style={{ textAlign: 'center', gridColumn: 'span 2', marginTop: '1rem', paddingTop: '5rem' }}>
                 <div style={{ borderTop: '1px solid #000', width: '40%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Alumno/a</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
