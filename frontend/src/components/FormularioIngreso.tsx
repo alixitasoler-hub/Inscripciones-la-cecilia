@@ -73,7 +73,9 @@ const FormularioIngreso = () => {
       direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '',
       telefono_alumno: '', email_alumno: '', nivel_ingreso: '', grado_anio: '', repitente: false,
       observaciones_nivel: '', salud_detalles: '', embarazo_parto: '', discapacidad: '', 
-      tiene_cud: false, posee_discapacidad: false, obra_social: '', otras_actividades: '', problemas_aprendizaje: '', 
+      tiene_cud: null as boolean | null, posee_discapacidad: null as boolean | null, obra_social: '', otras_actividades: '', 
+      tiene_problemas_aprendizaje: null as boolean | null, problemas_aprendizaje: '', 
+      tratamiento_profesional: null as boolean | null, tratamiento_detalles: '',
       motivo_eleccion: '', situacion_socioeconomica: '', otros_datos: '',
       contacto_entrevista_nombre: '', contacto_entrevista_medio: '', contacto_entrevista_dato: '',
       observaciones_generales: '', ciclo_lectivo: '' as string | number
@@ -260,10 +262,10 @@ const FormularioIngreso = () => {
     if (currentStep === 1) {
       const labels: Record<string, string> = {
         apellido: 'Apellido', nombre: 'Nombre', dni_nro: 'DNI', sexo: 'Sexo', 
-        fecha_nac: 'Fecha de Nacimiento', direccion: 'Dirección', localidad: 'Localidad', 
+        fecha_nac: 'Fecha de Nacimiento', lugar_nac: 'Lugar de Nacimiento', direccion: 'Dirección', localidad: 'Localidad', 
         nivel_ingreso: 'Nivel de Ingreso', grado_anio: 'Grado/Año'
       };
-      const required = ['apellido', 'nombre', 'dni_tipo', 'dni_nro', 'sexo', 'fecha_nac', 'direccion', 'localidad', 'provincia', 'pais', 'cp', 'nivel_ingreso', 'grado_anio'];
+      const required = ['apellido', 'nombre', 'dni_tipo', 'dni_nro', 'sexo', 'fecha_nac', 'lugar_nac', 'direccion', 'localidad', 'provincia', 'pais', 'cp', 'nivel_ingreso', 'grado_anio'];
       const missing = required.filter(f => !(data.ficha as any)[f]);
       
       if (missing.length > 0) {
@@ -274,6 +276,53 @@ const FormularioIngreso = () => {
       }
       if (!data.ficha.ciclo_lectivo) {
         alert('Debe seleccionar el Ciclo Lectivo para el que solicita el ingreso.');
+        return;
+      }
+    }
+
+    if (currentStep === 3) {
+      const step3Errors: string[] = [];
+      if (data.ficha.posee_discapacidad === null || data.ficha.posee_discapacidad === undefined) {
+        step3Errors.push('posee_discapacidad');
+      }
+      if (data.ficha.posee_discapacidad === true) {
+        if (data.ficha.tiene_cud === null || data.ficha.tiene_cud === undefined) {
+          step3Errors.push('tiene_cud');
+        }
+        if (!data.ficha.discapacidad || !data.ficha.discapacidad.trim()) {
+          step3Errors.push('discapacidad');
+        }
+      }
+      if (!data.ficha.salud_detalles || !data.ficha.salud_detalles.trim()) {
+        step3Errors.push('salud_detalles');
+      }
+      if (data.ficha.tiene_problemas_aprendizaje === null || data.ficha.tiene_problemas_aprendizaje === undefined) {
+        step3Errors.push('tiene_problemas_aprendizaje');
+      }
+      if (data.ficha.tiene_problemas_aprendizaje === true && (!data.ficha.problemas_aprendizaje || !data.ficha.problemas_aprendizaje.trim())) {
+        step3Errors.push('problemas_aprendizaje');
+      }
+      if (data.ficha.tratamiento_profesional === null || data.ficha.tratamiento_profesional === undefined) {
+        step3Errors.push('tratamiento_profesional');
+      }
+      if (data.ficha.tratamiento_profesional === true && (!data.ficha.tratamiento_detalles || !data.ficha.tratamiento_detalles.trim())) {
+        step3Errors.push('tratamiento_detalles');
+      }
+
+      if (step3Errors.length > 0) {
+        setFieldErrors(step3Errors);
+        const labels: Record<string, string> = {
+          posee_discapacidad: '¿Posee discapacidad?',
+          tiene_cud: '¿Posee CUD?',
+          discapacidad: 'Especificar discapacidad',
+          salud_detalles: 'Indicación médica relevante',
+          tiene_problemas_aprendizaje: '¿Tiene problemas de aprendizaje?',
+          problemas_aprendizaje: 'Especificar problemas de aprendizaje',
+          tratamiento_profesional: '¿Está siendo tratado por profesionales?',
+          tratamiento_detalles: 'Especificar tratamiento'
+        };
+        const missingNames = step3Errors.map(e => labels[e] || e).join(', ');
+        alert(`Por favor complete los siguientes campos obligatorios de Salud y Actividades: ${missingNames}`);
         return;
       }
     }
@@ -523,6 +572,7 @@ const FormularioIngreso = () => {
                 </select>
               </div>
               <div className="form-group"><label className="form-label">Fecha Nacimiento *</label><input type="text" className={getFieldClass('fecha_nac')} name="fecha_nac" placeholder="dd/mm/aaaa" value={data.ficha.fecha_nac} onChange={handleFichaChange} /></div>
+              <div className="form-group"><label className="form-label">Lugar de Nacimiento *</label><input className={getFieldClass('lugar_nac')} name="lugar_nac" placeholder="Ej: Santa Fe, Argentina" value={data.ficha.lugar_nac} onChange={handleFichaChange} /></div>
               <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion')} name="direccion" value={data.ficha.direccion} onChange={handleFichaChange} placeholder="Ej: Av. San Martín 1234" /></div>
               
               <div className="form-group">
@@ -671,15 +721,19 @@ const FormularioIngreso = () => {
           <section className="animate-in">
             <h3 className="section-title">Salud y Actividades</h3>
             <div className="form-group">
-              <label className="form-label">Información Médica Relevante</label>
-              <textarea className="form-textarea" name="salud_detalles" placeholder="Indique alergias, enfermedades crónicas, medicamentos o atenciones especiales..." value={data.ficha.salud_detalles} onChange={handleFichaChange} rows={4} />
+              <label className="form-label">Información Médica Relevante *</label>
+              <textarea className={getFieldClass('salud_detalles')} name="salud_detalles" placeholder="Indique alergias, enfermedades crónicas, medicamentos o atenciones especiales (si no tiene, indicar 'no tiene' o 'ninguna')..." value={data.ficha.salud_detalles} onChange={handleFichaChange} rows={4} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Embarazo / Parto (de la madre)</label>
+              <input className="form-input" name="embarazo_parto" placeholder="Detalles relevantes sobre el embarazo o parto..." value={data.ficha.embarazo_parto} onChange={handleFichaChange} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginTop: '1rem' }}>
               <div className="form-group">
-                 <label className="form-label">¿Posee el alumno/a alguna discapacidad?</label>
+                 <label className="form-label">¿Posee el alumno/a alguna discapacidad? *</label>
                  <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
-                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.posee_discapacidad} onChange={() => setData({...data, ficha: {...data.ficha, posee_discapacidad: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
-                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={!data.ficha.posee_discapacidad} onChange={() => setData({...data, ficha: {...data.ficha, posee_discapacidad: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.posee_discapacidad === true} onChange={() => setData({...data, ficha: {...data.ficha, posee_discapacidad: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.posee_discapacidad === false} onChange={() => setData({...data, ficha: {...data.ficha, posee_discapacidad: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
                  </div>
               </div>
               {data.ficha.posee_discapacidad && (
@@ -689,16 +743,49 @@ const FormularioIngreso = () => {
                     <input className={getFieldClass('discapacidad')} name="discapacidad" placeholder="Detalle la discapacidad..." value={data.ficha.discapacidad} onChange={handleFichaChange} />
                   </div>
                   <div className="form-group animate-in">
-                    <label className="form-label">¿Posee CUD (Certificado Único de Discapacidad)?</label>
+                    <label className="form-label">¿Posee CUD (Certificado Único de Discapacidad)? *</label>
                     <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
-                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
-                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={!data.ficha.tiene_cud} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
+                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_cud === true} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
+                        <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_cud === false} onChange={() => setData({...data, ficha: {...data.ficha, tiene_cud: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
                     </div>
                   </div>
                 </>
               )}
             </div>
-            <div className="form-group" style={{ marginTop: '1rem' }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+              <div className="form-group">
+                 <label className="form-label">¿Tiene el/la alumno/a problemas de aprendizaje? *</label>
+                 <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_problemas_aprendizaje === true} onChange={() => setData({...data, ficha: {...data.ficha, tiene_problemas_aprendizaje: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tiene_problemas_aprendizaje === false} onChange={() => setData({...data, ficha: {...data.ficha, tiene_problemas_aprendizaje: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
+                 </div>
+              </div>
+              {data.ficha.tiene_problemas_aprendizaje && (
+                <div className="form-group animate-in">
+                  <label className="form-label">Especifique cuál/es *</label>
+                  <input className={getFieldClass('problemas_aprendizaje')} name="problemas_aprendizaje" placeholder="Detalle los problemas de aprendizaje..." value={data.ficha.problemas_aprendizaje} onChange={handleFichaChange} />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+              <div className="form-group">
+                 <label className="form-label">¿Está siendo tratado por profesionales? *</label>
+                 <div className="flex gap-6" style={{paddingTop: '0.75rem'}}>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tratamiento_profesional === true} onChange={() => setData({...data, ficha: {...data.ficha, tratamiento_profesional: true}})} style={{width:'1.2rem', height:'1.2rem'}} /> Sí</label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium"><input type="radio" checked={data.ficha.tratamiento_profesional === false} onChange={() => setData({...data, ficha: {...data.ficha, tratamiento_profesional: false}})} style={{width:'1.2rem', height:'1.2rem'}} /> No</label>
+                 </div>
+              </div>
+              {data.ficha.tratamiento_profesional && (
+                <div className="form-group animate-in">
+                  <label className="form-label">Especifique cuál/es *</label>
+                  <input className={getFieldClass('tratamiento_detalles')} name="tratamiento_detalles" placeholder="Detalle los profesionales/tratamientos..." value={data.ficha.tratamiento_detalles} onChange={handleFichaChange} />
+                </div>
+              )}
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
               <label className="form-label">Intereses y Actividades Extracurriculares</label>
               <textarea className="form-textarea" name="otras_actividades" placeholder="¿Realiza deportes, arte, música o idiomas fuera del horario escolar?" value={data.ficha.otras_actividades} onChange={handleFichaChange} rows={3} />
             </div>
@@ -747,6 +834,18 @@ const FormularioIngreso = () => {
                     <div className="form-group"><label className="form-label">Nombres *</label><input className={getFieldClass('nombre', idx)} value={p.nombre} onChange={v => updateArray('padres', idx, 'nombre', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">DNI *</label><input className={getFieldClass('dni_nro', idx)} placeholder="Sin puntos" value={p.dni_nro} onChange={v => updateArray('padres', idx, 'dni_nro', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Fecha de Nacimiento *</label><input className={getFieldClass('fecha_nac', idx)} placeholder="dd/mm/aaaa" value={p.fecha_nac} onChange={v => updateArray('padres', idx, 'fecha_nac', v.target.value)} /></div>
+                    <div className="form-group">
+                      <label className="form-label">Estado Civil</label>
+                      <select className={getSelectClass('estado_civil', idx)} value={p.estado_civil} onChange={v => updateArray('padres', idx, 'estado_civil', v.target.value)}>
+                        <option value="">Seleccionar...</option>
+                        <option value="Soltero/a">Soltero/a</option>
+                        <option value="Casado/a">Casado/a</option>
+                        <option value="Divorciado/a">Divorciado/a</option>
+                        <option value="Viudo/a">Viudo/a</option>
+                        <option value="Unión de hecho">Unión de hecho / Concubinato</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
                     <div className="form-group"><label className="form-label">Celular / Teléfono *</label><input className={getFieldClass('celular', idx)} placeholder="Ej: 342 1234567" value={p.celular} onChange={v => updateArray('padres', idx, 'celular', v.target.value)} /></div>
                     <div className="form-group" style={{ gridColumn: '1/-1' }}><label className="form-label">Dirección (Calle y Altura) *</label><input className={getFieldClass('direccion', idx)} placeholder="Ej: Av. San Martín 1234" value={p.direccion} onChange={v => updateArray('padres', idx, 'direccion', v.target.value)} /></div>
                       <div className="form-group"><label className="form-label">Localidad/Ciudad *</label><input className={getFieldClass('localidad', idx)} list="localidades-list" placeholder="Ciudad" value={p.localidad} onChange={v => updateArray('padres', idx, 'localidad', v.target.value)} /></div>
@@ -773,6 +872,10 @@ const FormularioIngreso = () => {
                           <div className="form-group">
                             <label className="form-label">Horarios Laborales</label>
                             <input className="form-input" placeholder="Ej: 08:00 a 16:00 hs" value={p.horarios_laborales} onChange={v => updateArray('padres', idx, 'horarios_laborales', v.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Teléfono Laboral</label>
+                            <input className="form-input" placeholder="Ej: 342 4567890" value={p.telefono_laboral} onChange={v => updateArray('padres', idx, 'telefono_laboral', v.target.value)} />
                           </div>
                         </div>
                       </div>

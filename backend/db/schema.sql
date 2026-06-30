@@ -48,7 +48,10 @@ CREATE TABLE fichas (
   obra_social TEXT,
   -- Antecedentes
   otras_actividades TEXT,
-  problemas_aprendizaje TEXT,
+  tiene_problemas_aprendizaje INTEGER DEFAULT 0,
+  problemas_aprendizaje TEXT, -- especificación de problemas de aprendizaje
+  tratamiento_profesional INTEGER DEFAULT 0,
+  tratamiento_detalles TEXT,
   motivo_eleccion TEXT,
   -- Situación Socioeconómica (Muy buena, Buena, Regular, Mala)
   situacion_socioeconomica TEXT,

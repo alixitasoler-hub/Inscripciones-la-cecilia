@@ -552,7 +552,6 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <InputEdit campo="ciclo_lectivo" label="Ciclo Lectivo" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="repitente" label="Repitente (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="motivo_eleccion" label="Motivo de Elección" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="problemas_aprendizaje" label="Problemas de Aprendizaje" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
@@ -561,7 +560,6 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <Campo label="Ciclo Lectivo" value={ficha.ciclo_lectivo} />
                 <Campo label="Repitente" value={ficha.repitente ? 'Sí' : 'No'} />
                 <Campo label="Motivo de Elección" value={ficha.motivo_eleccion} />
-                <Campo label="Problemas de Aprendizaje" value={ficha.problemas_aprendizaje} />
               </Grid>
             )}
 
@@ -595,17 +593,25 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           <Seccion title="Salud" icon={<Heart size={16} />}>
             {editando ? (
               <Grid cols={2}>
-                <InputEdit campo="salud_detalles" label="Detalles de Salud" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="embarazo_parto" label="Embarazo / Parto" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="salud_detalles" label="Detalles de Salud / Ind. Médica" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="embarazo_parto" label="Embarazo / Parto (de la madre)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="discapacidad" label="Discapacidad" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="tiene_cud" label="Tiene CUD (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tiene_problemas_aprendizaje" label="¿Problemas de aprendizaje? (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="problemas_aprendizaje" label="Especifique problemas de aprendizaje" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tratamiento_profesional" label="¿Tratado por profesionales? (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tratamiento_detalles" label="Especifique tratamiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={2}>
-                <Campo label="Detalles de Salud" value={ficha.salud_detalles} />
-                <Campo label="Embarazo / Parto" value={ficha.embarazo_parto} />
+                <Campo label="Detalles de Salud / Ind. Médica" value={ficha.salud_detalles} />
+                <Campo label="Embarazo / Parto (de la madre)" value={ficha.embarazo_parto} />
                 <Campo label="Discapacidad" value={ficha.discapacidad} />
                 <Campo label="Tiene CUD" value={ficha.tiene_cud ? 'Sí' : 'No'} />
+                <Campo label="¿Tiene problemas de aprendizaje?" value={ficha.tiene_problemas_aprendizaje ? 'Sí' : 'No'} />
+                <Campo label="Especifique problemas de aprendizaje" value={ficha.problemas_aprendizaje} />
+                <Campo label="¿Está siendo tratado por profesionales?" value={ficha.tratamiento_profesional ? 'Sí' : 'No'} />
+                <Campo label="Especifique tratamiento" value={ficha.tratamiento_detalles} />
               </Grid>
             )}
           </Seccion>

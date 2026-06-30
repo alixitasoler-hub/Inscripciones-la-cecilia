@@ -128,16 +128,18 @@ export default {
             apellido, nombre, dni_tipo, dni_nro, sexo, fecha_nac, lugar_nac,
             direccion, localidad, provincia, pais, cp, telefono_alumno, email_alumno,
             nivel_ingreso, grado_anio, repitente, salud_detalles, embarazo_parto,
-            discapacidad, tiene_cud, obra_social, otras_actividades, problemas_aprendizaje,
+            discapacidad, tiene_cud, obra_social, otras_actividades, tiene_problemas_aprendizaje,
+            problemas_aprendizaje, tratamiento_profesional, tratamiento_detalles,
             motivo_eleccion, situacion_socioeconomica, observaciones_nivel, otros_datos, 
             contacto_entrevista_nombre, contacto_entrevista_medio, contacto_entrevista_dato,
             observaciones_generales, ciclo_lectivo
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `),
           ficha.apellido, ficha.nombre, ficha.dni_tipo, ficha.dni_nro, ficha.sexo, ficha.fecha_nac, ficha.lugar_nac,
           ficha.direccion, ficha.localidad, ficha.provincia, ficha.pais, ficha.cp, ficha.telefono_alumno, ficha.email_alumno,
           ficha.nivel_ingreso, ficha.grado_anio, ficha.repitente ? 1 : 0, ficha.salud_detalles, ficha.embarazo_parto,
-          ficha.discapacidad, ficha.tiene_cud ? 1 : 0, ficha.obra_social, ficha.otras_actividades, ficha.problemas_aprendizaje,
+          ficha.discapacidad, ficha.tiene_cud ? 1 : 0, ficha.obra_social, ficha.otras_actividades, ficha.tiene_problemas_aprendizaje ? 1 : 0,
+          ficha.problemas_aprendizaje, ficha.tratamiento_profesional ? 1 : 0, ficha.tratamiento_detalles,
           ficha.motivo_eleccion, ficha.situacion_socioeconomica, ficha.observaciones_nivel, ficha.otros_datos, 
           ficha.contacto_entrevista_nombre, ficha.contacto_entrevista_medio, ficha.contacto_entrevista_dato,
           ficha.observaciones_generales, ficha.ciclo_lectivo
