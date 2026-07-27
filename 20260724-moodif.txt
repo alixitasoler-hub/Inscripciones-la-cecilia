@@ -1,0 +1,14 @@
+INSCRIPCIONES
+
+FICHA
+
+que los campos obligatorios no puedan tener sólo espacios para sortearlos
+
+
+ADMIN
+
+que no aparezca en la ficha impresa:
+- el estado
+- especificar problemas de aprendizaje y tratamiento si es que contestaron que no
+
+-agregar un estado que sea entrevistado/pendiente de ingreso

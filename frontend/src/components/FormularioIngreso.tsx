@@ -258,6 +258,12 @@ const FormularioIngreso = () => {
     setData({ ...data, [key]: newList });
   };
 
+  const isEmpty = (val: any): boolean => {
+    if (val === null || val === undefined) return true;
+    if (typeof val === 'string') return val.trim().length === 0;
+    return false;
+  };
+
   const nextStep = () => {
     if (currentStep === 1) {
       const labels: Record<string, string> = {
@@ -266,7 +272,7 @@ const FormularioIngreso = () => {
         nivel_ingreso: 'Nivel de Ingreso', grado_anio: 'Grado/Año'
       };
       const required = ['apellido', 'nombre', 'dni_tipo', 'dni_nro', 'sexo', 'fecha_nac', 'lugar_nac', 'direccion', 'localidad', 'provincia', 'pais', 'cp', 'nivel_ingreso', 'grado_anio'];
-      const missing = required.filter(f => !(data.ficha as any)[f]);
+      const missing = required.filter(f => isEmpty((data.ficha as any)[f]));
       
       if (missing.length > 0) {
         setFieldErrors(missing);
@@ -274,7 +280,7 @@ const FormularioIngreso = () => {
         alert(`Por favor complete los siguientes campos obligatorios del alumno: ${names}`);
         return;
       }
-      if (!data.ficha.ciclo_lectivo) {
+      if (isEmpty(data.ficha.ciclo_lectivo)) {
         alert('Debe seleccionar el Ciclo Lectivo para el que solicita el ingreso.');
         return;
       }
@@ -289,23 +295,23 @@ const FormularioIngreso = () => {
         if (data.ficha.tiene_cud === null || data.ficha.tiene_cud === undefined) {
           step3Errors.push('tiene_cud');
         }
-        if (!data.ficha.discapacidad || !data.ficha.discapacidad.trim()) {
+        if (isEmpty(data.ficha.discapacidad)) {
           step3Errors.push('discapacidad');
         }
       }
-      if (!data.ficha.salud_detalles || !data.ficha.salud_detalles.trim()) {
+      if (isEmpty(data.ficha.salud_detalles)) {
         step3Errors.push('salud_detalles');
       }
       if (data.ficha.tiene_problemas_aprendizaje === null || data.ficha.tiene_problemas_aprendizaje === undefined) {
         step3Errors.push('tiene_problemas_aprendizaje');
       }
-      if (data.ficha.tiene_problemas_aprendizaje === true && (!data.ficha.problemas_aprendizaje || !data.ficha.problemas_aprendizaje.trim())) {
+      if (data.ficha.tiene_problemas_aprendizaje === true && isEmpty(data.ficha.problemas_aprendizaje)) {
         step3Errors.push('problemas_aprendizaje');
       }
       if (data.ficha.tratamiento_profesional === null || data.ficha.tratamiento_profesional === undefined) {
         step3Errors.push('tratamiento_profesional');
       }
-      if (data.ficha.tratamiento_profesional === true && (!data.ficha.tratamiento_detalles || !data.ficha.tratamiento_detalles.trim())) {
+      if (data.ficha.tratamiento_profesional === true && isEmpty(data.ficha.tratamiento_detalles)) {
         step3Errors.push('tratamiento_detalles');
       }
 
@@ -332,23 +338,23 @@ const FormularioIngreso = () => {
       let atLeastOneComplete = false;
 
       data.padres.forEach((p, idx) => {
-        const hasSomeData = p.apellido || p.nombre || p.dni_nro || p.direccion || p.celular;
+        const hasSomeData = !isEmpty(p.apellido) || !isEmpty(p.nombre) || !isEmpty(p.dni_nro) || !isEmpty(p.direccion) || !isEmpty(p.celular);
         if (hasSomeData) {
-            if (!p.apellido) errors.push(`p${idx}_apellido`);
-            if (!p.nombre) errors.push(`p${idx}_nombre`);
-            if (!p.rol) errors.push(`p${idx}_rol`);
-            if (!p.dni_nro) errors.push(`p${idx}_dni_nro`);
-            if (!p.direccion) errors.push(`p${idx}_direccion`);
-            if (!p.localidad) errors.push(`p${idx}_localidad`);
-            if (!p.provincia) errors.push(`p${idx}_provincia`);
-            if (!p.pais) errors.push(`p${idx}_pais`);
-            if (!p.cp) errors.push(`p${idx}_cp`);
-            if (!p.celular) errors.push(`p${idx}_celular`);
-            if (!p.email) errors.push(`p${idx}_email`);
-            if (!p.profesion_ocupacion) errors.push(`p${idx}_profesion_ocupacion`);
-            if (!p.fecha_nac) errors.push(`p${idx}_fecha_nac`);
+            if (isEmpty(p.apellido)) errors.push(`p${idx}_apellido`);
+            if (isEmpty(p.nombre)) errors.push(`p${idx}_nombre`);
+            if (isEmpty(p.rol)) errors.push(`p${idx}_rol`);
+            if (isEmpty(p.dni_nro)) errors.push(`p${idx}_dni_nro`);
+            if (isEmpty(p.direccion)) errors.push(`p${idx}_direccion`);
+            if (isEmpty(p.localidad)) errors.push(`p${idx}_localidad`);
+            if (isEmpty(p.provincia)) errors.push(`p${idx}_provincia`);
+            if (isEmpty(p.pais)) errors.push(`p${idx}_pais`);
+            if (isEmpty(p.cp)) errors.push(`p${idx}_cp`);
+            if (isEmpty(p.celular)) errors.push(`p${idx}_celular`);
+            if (isEmpty(p.email)) errors.push(`p${idx}_email`);
+            if (isEmpty(p.profesion_ocupacion)) errors.push(`p${idx}_profesion_ocupacion`);
+            if (isEmpty(p.fecha_nac)) errors.push(`p${idx}_fecha_nac`);
             
-            if (p.apellido && p.nombre && p.rol && p.dni_nro && p.direccion && p.localidad && p.celular && p.email && p.profesion_ocupacion && p.fecha_nac) {
+            if (!isEmpty(p.apellido) && !isEmpty(p.nombre) && !isEmpty(p.rol) && !isEmpty(p.dni_nro) && !isEmpty(p.direccion) && !isEmpty(p.localidad) && !isEmpty(p.celular) && !isEmpty(p.email) && !isEmpty(p.profesion_ocupacion) && !isEmpty(p.fecha_nac)) {
                 atLeastOneComplete = true;
             }
         }
@@ -372,15 +378,19 @@ const FormularioIngreso = () => {
       }
 
       const { contacto_entrevista_nombre, contacto_entrevista_medio, contacto_entrevista_dato } = data.ficha;
-      if (!contacto_entrevista_nombre || !contacto_entrevista_medio || !contacto_entrevista_dato) {
-          setFieldErrors(prev => [...prev, 'contacto_entrevista_nombre', 'contacto_entrevista_medio', 'contacto_entrevista_dato']);
+      if (isEmpty(contacto_entrevista_nombre) || isEmpty(contacto_entrevista_medio) || isEmpty(contacto_entrevista_dato)) {
+          const contactErrors: string[] = [];
+          if (isEmpty(contacto_entrevista_nombre)) contactErrors.push('contacto_entrevista_nombre');
+          if (isEmpty(contacto_entrevista_medio)) contactErrors.push('contacto_entrevista_medio');
+          if (isEmpty(contacto_entrevista_dato)) contactErrors.push('contacto_entrevista_dato');
+          setFieldErrors(prev => [...prev, ...contactErrors]);
           alert('Debe completar los datos de la persona de contacto para la entrevista.');
           return;
       }
     }
     
     if (currentStep === 5) {
-      if (!data.ficha.situacion_socioeconomica) {
+      if (isEmpty(data.ficha.situacion_socioeconomica)) {
         setFieldErrors(['situacion_socioeconomica']);
         alert('Debe completar la situación socioeconómica.');
         return;
