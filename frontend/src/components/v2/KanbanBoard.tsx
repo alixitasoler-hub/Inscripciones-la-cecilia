@@ -10,7 +10,8 @@ import {
   Clock,
   Filter,
   ArrowRight,
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ const STAGES = [
   { id: 'all', title: 'Todas', color: 'var(--primary)' },
   { id: 'pendiente', title: 'Nuevas / Pendientes', color: '#64748B' },
   { id: 'entrevista_programada', title: 'Por Entrevistar', color: '#F59E0B' },
+  { id: 'entrevistado_pendiente', title: 'Entrevistado / Pendiente de Ingreso', color: '#8B5CF6' },
   { id: 'finalizado', title: 'Admitidos', color: '#10B981' },
   { id: 'cancelado', title: 'Cancelados / Bajas', color: '#EF4444' }
 ];
@@ -239,6 +241,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
 
         .status-badge-pendiente { background: #f1f5f9; color: #475569; }
         .status-badge-entrevista_programada { background: #fff7ed; color: #c2410c; }
+        .status-badge-entrevistado_pendiente { background: #f5f3ff; color: #6d28d9; }
         .status-badge-finalizado { background: #f0fdf4; color: #15803d; }
         .status-badge-cancelado { background: #fef2f2; color: #b91c1c; }
 
@@ -319,6 +322,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
             {s.id === 'all' && <Filter size={16} />}
             {s.id === 'pendiente' && <Clock size={16} />}
             {s.id === 'entrevista_programada' && <Calendar size={16} />}
+            {s.id === 'entrevistado_pendiente' && <UserCheck size={16} />}
             {s.id === 'finalizado' && <CheckCircle2 size={16} />}
             {s.id === 'cancelado' && <XCircle size={16} />}
             {s.title}
@@ -369,6 +373,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
               <span className={`status-badge status-badge-${f.estado}`}>
                 {f.estado === 'pendiente' && <Clock size={12} />}
                 {f.estado === 'entrevista_programada' && <Calendar size={12} />}
+                {f.estado === 'entrevistado_pendiente' && <UserCheck size={12} />}
                 {f.estado === 'finalizado' && <CheckCircle2 size={12} />}
                 {f.estado === 'cancelado' && <XCircle size={12} />}
                 {STAGES.find(s => s.id === f.estado)?.title || f.estado}

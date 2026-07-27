@@ -165,6 +165,7 @@ const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: '#64748B' },
   contactado: { label: 'Contactado', color: '#F59E0B' },
   entrevista_programada: { label: 'Entrevista Programada', color: '#3B82F6' },
+  entrevistado_pendiente: { label: 'Entrevistado / Pendiente de Ingreso', color: '#8B5CF6' },
   finalizado: { label: 'Admitido', color: '#10B981' },
   cancelado: { label: 'Cancelado / Baja', color: '#EF4444' },
 };
@@ -486,7 +487,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '8px', padding: '0.5rem 1rem', marginBottom: '0.5rem' }}>
+            <div className="no-print" style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '8px', padding: '0.5rem 1rem', marginBottom: '0.5rem' }}>
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.7 }}>Estado</div>
               <div style={{ fontWeight: 800 }}>{estado.label}</div>
             </div>
@@ -609,9 +610,13 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <Campo label="Discapacidad" value={ficha.discapacidad} />
                 <Campo label="Tiene CUD" value={ficha.tiene_cud ? 'Sí' : 'No'} />
                 <Campo label="¿Tiene problemas de aprendizaje?" value={ficha.tiene_problemas_aprendizaje ? 'Sí' : 'No'} />
-                <Campo label="Especifique problemas de aprendizaje" value={ficha.problemas_aprendizaje} />
+                <div className={!ficha.tiene_problemas_aprendizaje ? "no-print" : ""}>
+                  <Campo label="Especifique problemas de aprendizaje" value={ficha.problemas_aprendizaje} />
+                </div>
                 <Campo label="¿Está siendo tratado por profesionales?" value={ficha.tratamiento_profesional ? 'Sí' : 'No'} />
-                <Campo label="Especifique tratamiento" value={ficha.tratamiento_detalles} />
+                <div className={!ficha.tratamiento_profesional ? "no-print" : ""}>
+                  <Campo label="Especifique tratamiento" value={ficha.tratamiento_detalles} />
+                </div>
               </Grid>
             )}
           </Seccion>

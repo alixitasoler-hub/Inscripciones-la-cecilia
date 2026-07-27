@@ -601,6 +601,7 @@ h1, h2, h3, h4, h5, h6 {
 .badge-pendiente { background: #E2E8F0; color: #475569; }
 .badge-contactado { background: #DBEAFE; color: #1D4ED8; }
 .badge-entrevista_programada { background: #FEF3C7; color: #B45309; }
+.badge-entrevistado_pendiente { background: #EDE9FE; color: #6D28D9; }
 .badge-finalizado { background: #DCFCE7; color: #15803D; }
 .badge-cancelado { background: #FEE2E2; color: #B91C1C; }
 
