@@ -298,14 +298,23 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
     <>
       {/* Estilos de impresión y visibilidad */}
       <style>{`
-        /* Ocultar el acuerdo en pantalla por defecto */
+        /* Ocultar el acuerdo en pantalla por defecto sin removerlo del árbol de renderizado para evitar problemas de paginación al imprimir */
         .acuerdo-admision {
-          display: none !important;
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
         }
 
         @media print {
           /* Mostrar el acuerdo únicamente al imprimir */
           .acuerdo-admision {
+            position: static !important;
+            width: auto !important;
+            height: auto !important;
+            overflow: visible !important;
             display: block !important;
             page-break-before: always;
             border-top: none !important;
