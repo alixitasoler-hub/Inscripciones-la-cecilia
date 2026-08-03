@@ -65,6 +65,7 @@ const FormularioIngreso = () => {
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
   const [isAbierto, setIsAbierto] = useState(true);
   const [terminosAceptados, setTerminosAceptados] = useState(false);
+  const [sinSegundoAdulto, setSinSegundoAdulto] = useState(false);
 
   // Estado unificado
   const [data, setData] = useState({
@@ -98,6 +99,7 @@ const FormularioIngreso = () => {
       { nivel: '5° año', anio_cursado: '', escuela: '', observaciones: '' }
     ],
     padres: [
+      { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', direccion_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false },
       { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', direccion_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false }
     ],
     hermanos: [] as Array<{vinculo: string, vinculo_otro: string, nombre_apellido: string, dni_nro: string, fecha_nac: string, estado_civil: string, estudios_escuela: string, domicilio_ocupacion: string, ocupacion: string}>,
@@ -222,6 +224,28 @@ const FormularioIngreso = () => {
     setData({ ...data, escolaridad: newList });
   };
 
+  const handleToggleSinSegundo = (checked: boolean) => {
+    setSinSegundoAdulto(checked);
+    if (checked) {
+      // Dejar solo el primer responsable
+      setData(prev => ({
+        ...prev,
+        padres: prev.padres.slice(0, 1)
+      }));
+    } else {
+      // Agregar el segundo responsable vacío si no está
+      if (data.padres.length < 2) {
+        setData(prev => ({
+          ...prev,
+          padres: [
+            ...prev.padres,
+            { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', direccion_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false }
+          ]
+        }));
+      }
+    }
+  };
+
   const handleRepeatGrade = (index: number) => {
     const newList = [...data.escolaridad];
     const item = newList[index];
@@ -335,11 +359,12 @@ const FormularioIngreso = () => {
 
     if (currentStep === 4) {
       let errors: string[] = [];
-      let atLeastOneComplete = false;
 
       data.padres.forEach((p, idx) => {
+        const isRequired = (idx === 0) || (idx === 1 && !sinSegundoAdulto);
         const hasSomeData = !isEmpty(p.apellido) || !isEmpty(p.nombre) || !isEmpty(p.dni_nro) || !isEmpty(p.direccion) || !isEmpty(p.celular);
-        if (hasSomeData) {
+        
+        if (isRequired || hasSomeData) {
             if (isEmpty(p.apellido)) errors.push(`p${idx}_apellido`);
             if (isEmpty(p.nombre)) errors.push(`p${idx}_nombre`);
             if (isEmpty(p.rol)) errors.push(`p${idx}_rol`);
@@ -353,17 +378,8 @@ const FormularioIngreso = () => {
             if (isEmpty(p.email)) errors.push(`p${idx}_email`);
             if (isEmpty(p.profesion_ocupacion)) errors.push(`p${idx}_profesion_ocupacion`);
             if (isEmpty(p.fecha_nac)) errors.push(`p${idx}_fecha_nac`);
-            
-            if (!isEmpty(p.apellido) && !isEmpty(p.nombre) && !isEmpty(p.rol) && !isEmpty(p.dni_nro) && !isEmpty(p.direccion) && !isEmpty(p.localidad) && !isEmpty(p.celular) && !isEmpty(p.email) && !isEmpty(p.profesion_ocupacion) && !isEmpty(p.fecha_nac)) {
-                atLeastOneComplete = true;
-            }
         }
       });
-
-      if (!atLeastOneComplete) {
-          alert('Debe cargar al menos un adulto responsable con todos sus datos obligatorios (*).');
-          return;
-      }
 
       if (errors.length > 0) {
         const labels: Record<string, string> = { apellido: 'Apellido', nombre: 'Nombre', rol: 'Vínculo', dni_nro: 'DNI', direccion: 'Dirección', localidad: 'Localidad', celular: 'Celular', email: 'Email', profesion_ocupacion: 'Ocupación', fecha_nac: 'Fecha Nac.' };
@@ -809,37 +825,60 @@ const FormularioIngreso = () => {
         {/* PASO 4 */}
         {currentStep === 4 && (
           <section className="animate-in">
-            <div className="mb-6">
-              <h3 className="section-title" style={{marginBottom: '0.5rem'}}>Responsables / Tutores</h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Cargue los datos de los padres, tutores o encargados del alumno/a.</p>
+            <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h3 className="section-title" style={{marginBottom: '0.5rem'}}>Responsables / Tutores</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Cargue los datos de los padres, tutores o encargados del alumno/a.</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <input 
+                  type="checkbox" 
+                  id="sin-segundo-adulto" 
+                  checked={sinSegundoAdulto} 
+                  onChange={e => handleToggleSinSegundo(e.target.checked)} 
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="sin-segundo-adulto" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }}>
+                  No existe un segundo adulto a cargo
+                </label>
+              </div>
             </div>
             
             {data.padres.map((p, idx) => (
               <div key={idx}>
                 <div className="card" style={{ padding: '2rem', marginBottom: '2rem', borderLeft: '6px solid var(--primary)', borderRadius: 'var(--radius-md)' }}>
-                  <div className="flex justify-between items-center mb-6">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <div style={{ background: 'var(--primary)', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{idx + 1}</div>
-                      <h4 style={{ fontSize: '1.125rem', fontWeight: 700 }}>{p.rol === 'Otro' ? p.rol_otro : (p.rol || `Responsable`)}</h4>
+                      <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginRight: '0.5rem' }}>Adulto Responsable {idx + 1}</h4>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <select 
+                          className={getSelectClass('rol', idx)} 
+                          style={{ padding: '0.35rem 1.5rem 0.35rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer' }} 
+                          value={p.rol} 
+                          onChange={v => updateArray('padres', idx, 'rol', v.target.value)}
+                        >
+                          <option value="">Seleccionar vínculo...</option>
+                          <option value="Madre">Madre</option>
+                          <option value="Padre">Padre</option>
+                          <option value="Tutor/a">Tutor/a</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                        {p.rol === 'Otro' && (
+                          <input 
+                            className={getFieldClass('rol_otro', idx)} 
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border-color)', borderRadius: '6px', width: '150px' }} 
+                            placeholder="Especifique..." 
+                            value={p.rol_otro} 
+                            onChange={v => updateArray('padres', idx, 'rol_otro', v.target.value)} 
+                          />
+                        )}
+                      </div>
                     </div>
-                    {data.padres.length > 1 && <button onClick={() => removeFromArray('padres', idx)} className="btn btn-ghost" style={{color:'var(--error)'}}><Trash2 size={20} /></button>}
+                    {data.padres.length > 2 && <button onClick={() => removeFromArray('padres', idx)} className="btn btn-ghost" style={{color:'var(--error)'}}><Trash2 size={20} /></button>}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
-                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                        <label className="form-label">Vínculo / Relación con el alumno *</label>
-                        <div className="flex gap-4">
-                          <select className={getSelectClass('rol', idx)} style={{ flex: 1 }} value={p.rol} onChange={v => updateArray('padres', idx, 'rol', v.target.value)}>
-                            <option value="">Seleccionar vínculo...</option>
-                            <option value="Madre">Madre</option>
-                            <option value="Padre">Padre</option>
-                            <option value="Tutor/a">Tutor/a</option>
-                            <option value="Otro">Otro</option>
-                          </select>
-                          {p.rol === 'Otro' && (
-                            <input className={getFieldClass('rol_otro', idx)} style={{ flex: 1 }} placeholder="Especifique el vínculo..." value={p.rol_otro} onChange={v => updateArray('padres', idx, 'rol_otro', v.target.value)} />
-                          )}
-                        </div>
-                    </div>
                     <div className="form-group"><label className="form-label">Apellidos *</label><input className={getFieldClass('apellido', idx)} value={p.apellido} onChange={v => updateArray('padres', idx, 'apellido', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">Nombres *</label><input className={getFieldClass('nombre', idx)} value={p.nombre} onChange={v => updateArray('padres', idx, 'nombre', v.target.value)} /></div>
                     <div className="form-group"><label className="form-label">DNI *</label><input className={getFieldClass('dni_nro', idx)} placeholder="Sin puntos" value={p.dni_nro} onChange={v => updateArray('padres', idx, 'dni_nro', v.target.value)} /></div>
@@ -891,24 +930,11 @@ const FormularioIngreso = () => {
                       </div>
                   </div>
                 </div>
-                
-                {idx === 0 && data.padres.length === 1 && (
-                  <div className="card animate-in" style={{ padding: '2rem', marginBottom: '2rem', background: 'var(--bg-main)', border: '2px dashed var(--primary)', textAlign: 'center' }}>
-                    <Users size={32} color="var(--primary)" style={{ margin: '0 auto 1rem' }} />
-                    <h4 style={{ marginBottom: '0.5rem' }}>¿Desea agregar otro responsable?</h4>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Recomendamos cargar los datos de ambos padres o tutores para una mejor comunicación.</p>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={() => addToArray('padres', { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', direccion_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false })}
-                    >
-                      <Plus size={18} /> Agregar Segundo Responsable
-                    </button>
-                  </div>
-                )}
 
                 {idx > 0 && idx === data.padres.length - 1 && (
                   <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                       <button 
+                        type="button"
                         className="btn btn-outline" 
                         onClick={() => addToArray('padres', { rol: '', rol_otro: '', apellido: '', nombre: '', dni_nro: '', dni_tipo: 'DNI', estado_civil: '', fecha_nac: '', lugar_nac_datos: '', direccion: '', localidad: '', provincia: 'Santa Fe', pais: 'Argentina', cp: '', telefono_casa: '', celular: '', email: '', profesion_ocupacion: '', empresa_laboral: '', direccion_laboral: '', telefono_laboral: '', horarios_laborales: '', whatsapp_contacto: false })}
                       >
