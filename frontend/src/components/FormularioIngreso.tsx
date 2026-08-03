@@ -66,6 +66,11 @@ const FormularioIngreso = () => {
   const [isAbierto, setIsAbierto] = useState(true);
   const [terminosAceptados, setTerminosAceptados] = useState(false);
   const [sinSegundoAdulto, setSinSegundoAdulto] = useState(false);
+  const [modalAlert, setModalAlert] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+
+  const alert = (message: string) => {
+    setModalAlert({ visible: true, message });
+  };
 
   // Estado unificado
   const [data, setData] = useState({
@@ -389,7 +394,7 @@ const FormularioIngreso = () => {
         });
         const uniqueNames = Array.from(new Set(missingNames)).join(', ');
         setFieldErrors(errors);
-        alert(`Faltan completar datos obligatorios en los responsables: ${uniqueNames}`);
+        alert(`Faltan completar datos obligatorios en los responsables: ${uniqueNames}. Si no existe un segundo adulto a cargo, recuerde marcar la casilla correspondiente debajo del primer responsable.`);
         return;
       }
 
@@ -825,23 +830,9 @@ const FormularioIngreso = () => {
         {/* PASO 4 */}
         {currentStep === 4 && (
           <section className="animate-in">
-            <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-              <div>
-                <h3 className="section-title" style={{marginBottom: '0.5rem'}}>Responsables / Tutores</h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Cargue los datos de los padres, tutores o encargados del alumno/a.</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <input 
-                  type="checkbox" 
-                  id="sin-segundo-adulto" 
-                  checked={sinSegundoAdulto} 
-                  onChange={e => handleToggleSinSegundo(e.target.checked)} 
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="sin-segundo-adulto" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }}>
-                  No existe un segundo adulto a cargo
-                </label>
-              </div>
+            <div className="mb-6">
+              <h3 className="section-title" style={{marginBottom: '0.5rem'}}>Responsables / Tutores</h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Cargue los datos de los padres, tutores o encargados del alumno/a.</p>
             </div>
             
             {data.padres.map((p, idx) => (
@@ -930,6 +921,21 @@ const FormularioIngreso = () => {
                       </div>
                   </div>
                 </div>
+
+                {idx === 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '2rem', width: 'fit-content' }}>
+                    <input 
+                      type="checkbox" 
+                      id="sin-segundo-adulto" 
+                      checked={sinSegundoAdulto} 
+                      onChange={e => handleToggleSinSegundo(e.target.checked)} 
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="sin-segundo-adulto" style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }}>
+                      No existe un segundo adulto a cargo
+                    </label>
+                  </div>
+                )}
 
                 {idx > 0 && idx === data.padres.length - 1 && (
                   <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -1144,6 +1150,60 @@ const FormularioIngreso = () => {
           </div>
         </div>
       </div>
+      
+      {modalAlert.visible && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1.5rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 'var(--radius-lg, 12px)',
+            padding: '2.5rem',
+            width: '100%',
+            maxWidth: '480px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            textAlign: 'center',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            fontFamily: 'inherit'
+          }}>
+            <div style={{ 
+              background: 'var(--primary-soft, #f1f5f9)', 
+              color: 'var(--primary, #1c3f60)', 
+              width: '56px', 
+              height: '56px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 1.5rem' 
+            }}>
+              <AlertCircle size={28} />
+            </div>
+            <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #1c3f60)', marginBottom: '0.75rem' }}>Atención</h4>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-main, #334155)', lineHeight: '1.6', marginBottom: '1.75rem' }}>
+              {modalAlert.message}
+            </p>
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}
+              onClick={() => setModalAlert({ visible: false, message: '' })}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
       </>
       )}
     </div>
