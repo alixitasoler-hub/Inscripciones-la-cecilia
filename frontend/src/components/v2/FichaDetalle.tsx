@@ -294,6 +294,9 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
   const { ficha, escolaridad = [], padres = [], hermanos = [], convivientes = [], entrevistas = [] } = data;
   const estado = ESTADO_LABELS[ficha.estado] || { label: ficha.estado, color: '#64748B' };
 
+  const validParents = padres.filter((p: any) => p.nombre || p.apellido || p.dni_nro);
+  const hasSecondParent = validParents.length > 1;
+
   return (
     <>
       {/* Estilos de impresión y visibilidad */}
@@ -631,9 +634,9 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           </Seccion>
 
           {/* Padres / Tutores */}
-          {padres.length > 0 && (
+          {validParents.length > 0 && (
             <Seccion title="Padres / Tutores" icon={<Users size={16} />}>
-              {padres.map((p: any, i: number) => (
+              {validParents.map((p: any, i: number) => (
                 <div key={i} style={{ background: '#f8fafc', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1rem' }}>{p.rol || `Contacto ${i + 1}`}</div>
                   <Grid cols={3}>
@@ -827,16 +830,18 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
             {/* Bloques de Firmas */}
             <div className="evitar-quiebre firmas-block" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem 3rem' }}>
-              <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
-                <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
+              <div style={{ textAlign: 'center', paddingTop: '5rem', gridColumn: hasSecondParent ? 'auto' : 'span 2' }}>
+                <div style={{ borderTop: '1px solid #000', width: hasSecondParent ? '80%' : '40%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
               </div>
-              <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
-                <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
-              </div>
+              {hasSecondParent && (
+                <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
+                  <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+                </div>
+              )}
               <div style={{ textAlign: 'center', gridColumn: 'span 2', marginTop: '1rem', paddingTop: '5rem' }}>
                 <div style={{ borderTop: '1px solid #000', width: '40%', margin: '0 auto 0.5rem' }}></div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Alumno/a</div>
