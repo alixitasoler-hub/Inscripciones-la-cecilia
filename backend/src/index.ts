@@ -120,6 +120,13 @@ export default {
       if (path === '/api/fichas' && request.method === 'POST') {
         const body = await request.json() as any;
         const { ficha, escolaridad, padres, hermanos, convivientes } = body;
+
+        if (!ficha || !ficha.apellido?.trim() || !ficha.nombre?.trim() || !ficha.dni_nro?.trim() || !ficha.nivel_ingreso?.trim() || !ficha.grado_anio?.trim()) {
+          return jsonResponse({ error: 'Faltan completar campos obligatorios del alumno (apellido, nombre, DNI, nivel, grado).' }, 400);
+        }
+        if (!padres || padres.length === 0 || !padres[0].apellido?.trim() || !padres[0].nombre?.trim()) {
+          return jsonResponse({ error: 'Debe ingresar al menos un adulto responsable con nombre y apellido.' }, 400);
+        }
         
         const cleanBind = (stmt: any, ...args: any[]) => stmt.bind(...args.map(v => v === undefined ? null : v));
 

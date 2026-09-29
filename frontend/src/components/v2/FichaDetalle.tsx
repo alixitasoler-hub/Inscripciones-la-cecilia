@@ -642,15 +642,22 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                   <Grid cols={3}>
                     <Campo label="Nombre" value={`${p.apellido || ''}, ${p.nombre || ''}`} />
                     <Campo label="DNI" value={p.dni_nro} />
+                    <Campo label="Fecha de Nacimiento" value={p.fecha_nac} />
+                    <Campo label="Lugar de Nacimiento" value={p.lugar_nac_datos} />
                     <Campo label="Estado Civil" value={p.estado_civil} />
                     <Campo label="Celular" value={p.celular} />
+                    <Campo label="Teléfono Fijo" value={p.telefono_casa} />
                     <Campo label="Email" value={p.email} />
                     <Campo label="WhatsApp" value={p.whatsapp_contacto ? 'Sí' : 'No'} />
-                    <Campo label="Profesión" value={p.profesion_ocupacion} />
-                    <Campo label="Empresa" value={p.empresa_laboral} />
-                    <Campo label="Tel. Laboral" value={p.telefono_laboral} />
                     <Campo label="Dirección" value={p.direccion} />
                     <Campo label="Localidad" value={p.localidad} />
+                    <Campo label="Provincia" value={p.provincia} />
+                    <Campo label="País" value={p.pais} />
+                    <Campo label="Código Postal" value={p.cp} />
+                    <Campo label="Profesión" value={p.profesion_ocupacion} />
+                    <Campo label="Empresa" value={p.empresa_laboral} />
+                    <Campo label="Dirección Laboral" value={p.direccion_laboral} />
+                    <Campo label="Tel. Laboral" value={p.telefono_laboral} />
                     <Campo label="Horarios" value={p.horarios_laborales} />
                   </Grid>
                 </div>

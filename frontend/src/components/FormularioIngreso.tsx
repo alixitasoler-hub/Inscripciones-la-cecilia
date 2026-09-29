@@ -367,12 +367,13 @@ const FormularioIngreso = () => {
 
       data.padres.forEach((p, idx) => {
         const isRequired = (idx === 0) || (idx === 1 && !sinSegundoAdulto);
-        const hasSomeData = !isEmpty(p.apellido) || !isEmpty(p.nombre) || !isEmpty(p.dni_nro) || !isEmpty(p.direccion) || !isEmpty(p.celular);
+        const hasSomeData = !isEmpty(p.apellido) || !isEmpty(p.nombre) || !isEmpty(p.dni_nro) || !isEmpty(p.direccion) || !isEmpty(p.celular) || !isEmpty(p.email) || !isEmpty(p.fecha_nac);
         
         if (isRequired || hasSomeData) {
             if (isEmpty(p.apellido)) errors.push(`p${idx}_apellido`);
             if (isEmpty(p.nombre)) errors.push(`p${idx}_nombre`);
             if (isEmpty(p.rol)) errors.push(`p${idx}_rol`);
+            if (p.rol === 'Otro' && isEmpty(p.rol_otro)) errors.push(`p${idx}_rol_otro`);
             if (isEmpty(p.dni_nro)) errors.push(`p${idx}_dni_nro`);
             if (isEmpty(p.direccion)) errors.push(`p${idx}_direccion`);
             if (isEmpty(p.localidad)) errors.push(`p${idx}_localidad`);
@@ -387,7 +388,7 @@ const FormularioIngreso = () => {
       });
 
       if (errors.length > 0) {
-        const labels: Record<string, string> = { apellido: 'Apellido', nombre: 'Nombre', rol: 'Vínculo', dni_nro: 'DNI', direccion: 'Dirección', localidad: 'Localidad', celular: 'Celular', email: 'Email', profesion_ocupacion: 'Ocupación', fecha_nac: 'Fecha Nac.' };
+        const labels: Record<string, string> = { apellido: 'Apellido', nombre: 'Nombre', rol: 'Vínculo', rol_otro: 'Especificar vínculo', dni_nro: 'DNI', direccion: 'Dirección', localidad: 'Localidad', celular: 'Celular', email: 'Email', profesion_ocupacion: 'Ocupación', fecha_nac: 'Fecha Nac.' };
         const missingNames = errors.map(e => {
             const field = e.split('_')[1];
             return labels[field] || field;
@@ -428,9 +429,151 @@ const FormularioIngreso = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  const validateAllSteps = (): boolean => {
+    // 1. Ciclo Lectivo
+    if (isEmpty(data.ficha.ciclo_lectivo)) {
+      alert('Debe seleccionar el Ciclo Lectivo para el que solicita el ingreso.');
+      return false;
+    }
+
+    // 2. Paso 1: Alumno
+    const labelsP1: Record<string, string> = {
+      apellido: 'Apellido', nombre: 'Nombre', dni_nro: 'DNI', sexo: 'Sexo', 
+      fecha_nac: 'Fecha de Nacimiento', lugar_nac: 'Lugar de Nacimiento', direccion: 'Dirección', localidad: 'Localidad', 
+      nivel_ingreso: 'Nivel de Ingreso', grado_anio: 'Grado/Año'
+    };
+    const requiredP1 = ['apellido', 'nombre', 'dni_tipo', 'dni_nro', 'sexo', 'fecha_nac', 'lugar_nac', 'direccion', 'localidad', 'provincia', 'pais', 'cp', 'nivel_ingreso', 'grado_anio'];
+    const missingP1 = requiredP1.filter(f => isEmpty((data.ficha as any)[f]));
+    if (missingP1.length > 0) {
+      setFieldErrors(missingP1);
+      const names = missingP1.map(f => labelsP1[f] || f).join(', ');
+      alert(`Por favor complete los siguientes campos obligatorios del alumno: ${names}`);
+      setCurrentStep(1);
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    // 3. Paso 3: Salud y Actividades
+    const step3Errors: string[] = [];
+    if (data.ficha.posee_discapacidad === null || data.ficha.posee_discapacidad === undefined) {
+      step3Errors.push('posee_discapacidad');
+    }
+    if (data.ficha.posee_discapacidad === true) {
+      if (data.ficha.tiene_cud === null || data.ficha.tiene_cud === undefined) {
+        step3Errors.push('tiene_cud');
+      }
+      if (isEmpty(data.ficha.discapacidad)) {
+        step3Errors.push('discapacidad');
+      }
+    }
+    if (isEmpty(data.ficha.salud_detalles)) {
+      step3Errors.push('salud_detalles');
+    }
+    if (data.ficha.tiene_problemas_aprendizaje === null || data.ficha.tiene_problemas_aprendizaje === undefined) {
+      step3Errors.push('tiene_problemas_aprendizaje');
+    }
+    if (data.ficha.tiene_problemas_aprendizaje === true && isEmpty(data.ficha.problemas_aprendizaje)) {
+      step3Errors.push('problemas_aprendizaje');
+    }
+    if (data.ficha.tratamiento_profesional === null || data.ficha.tratamiento_profesional === undefined) {
+      step3Errors.push('tratamiento_profesional');
+    }
+    if (data.ficha.tratamiento_profesional === true && isEmpty(data.ficha.tratamiento_detalles)) {
+      step3Errors.push('tratamiento_detalles');
+    }
+    if (step3Errors.length > 0) {
+      setFieldErrors(step3Errors);
+      const labelsS3: Record<string, string> = {
+        posee_discapacidad: '¿Posee discapacidad?',
+        tiene_cud: '¿Posee CUD?',
+        discapacidad: 'Especificar discapacidad',
+        salud_detalles: 'Indicación médica relevante',
+        tiene_problemas_aprendizaje: '¿Tiene problemas de aprendizaje?',
+        problemas_aprendizaje: 'Especificar problemas de aprendizaje',
+        tratamiento_profesional: '¿Está siendo tratado por profesionales?',
+        tratamiento_detalles: 'Especificar tratamiento'
+      };
+      const missingNames = step3Errors.map(e => labelsS3[e] || e).join(', ');
+      alert(`Por favor complete los siguientes campos obligatorios de Salud y Actividades: ${missingNames}`);
+      setCurrentStep(3);
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    // 4. Paso 4: Responsables
+    if (data.padres.length === 0) {
+      alert('Debe haber al menos un adulto responsable cargado.');
+      setCurrentStep(4);
+      window.scrollTo(0, 0);
+      return false;
+    }
+    let pErrors: string[] = [];
+    data.padres.forEach((p, idx) => {
+      const isRequired = (idx === 0) || (idx === 1 && !sinSegundoAdulto);
+      const hasSomeData = !isEmpty(p.apellido) || !isEmpty(p.nombre) || !isEmpty(p.dni_nro) || !isEmpty(p.direccion) || !isEmpty(p.celular) || !isEmpty(p.email) || !isEmpty(p.fecha_nac);
+      if (isRequired || hasSomeData) {
+        if (isEmpty(p.apellido)) pErrors.push(`p${idx}_apellido`);
+        if (isEmpty(p.nombre)) pErrors.push(`p${idx}_nombre`);
+        if (isEmpty(p.rol)) pErrors.push(`p${idx}_rol`);
+        if (p.rol === 'Otro' && isEmpty(p.rol_otro)) pErrors.push(`p${idx}_rol_otro`);
+        if (isEmpty(p.dni_nro)) pErrors.push(`p${idx}_dni_nro`);
+        if (isEmpty(p.direccion)) pErrors.push(`p${idx}_direccion`);
+        if (isEmpty(p.localidad)) pErrors.push(`p${idx}_localidad`);
+        if (isEmpty(p.provincia)) pErrors.push(`p${idx}_provincia`);
+        if (isEmpty(p.pais)) pErrors.push(`p${idx}_pais`);
+        if (isEmpty(p.cp)) pErrors.push(`p${idx}_cp`);
+        if (isEmpty(p.celular)) pErrors.push(`p${idx}_celular`);
+        if (isEmpty(p.email)) pErrors.push(`p${idx}_email`);
+        if (isEmpty(p.profesion_ocupacion)) pErrors.push(`p${idx}_profesion_ocupacion`);
+        if (isEmpty(p.fecha_nac)) pErrors.push(`p${idx}_fecha_nac`);
+      }
+    });
+    if (pErrors.length > 0) {
+      const labelsP4: Record<string, string> = { apellido: 'Apellido', nombre: 'Nombre', rol: 'Vínculo', rol_otro: 'Especificar vínculo', dni_nro: 'DNI', direccion: 'Dirección', localidad: 'Localidad', celular: 'Celular', email: 'Email', profesion_ocupacion: 'Ocupación', fecha_nac: 'Fecha Nac.' };
+      const missingNames = pErrors.map(e => {
+        const field = e.split('_')[1];
+        return labelsP4[field] || field;
+      });
+      const uniqueNames = Array.from(new Set(missingNames)).join(', ');
+      setFieldErrors(pErrors);
+      alert(`Faltan completar datos obligatorios en los responsables: ${uniqueNames}. Si no existe un segundo adulto a cargo, recuerde marcar la casilla correspondiente debajo del primer responsable.`);
+      setCurrentStep(4);
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    const { contacto_entrevista_nombre, contacto_entrevista_medio, contacto_entrevista_dato } = data.ficha;
+    if (isEmpty(contacto_entrevista_nombre) || isEmpty(contacto_entrevista_medio) || isEmpty(contacto_entrevista_dato)) {
+      const contactErrors: string[] = [];
+      if (isEmpty(contacto_entrevista_nombre)) contactErrors.push('contacto_entrevista_nombre');
+      if (isEmpty(contacto_entrevista_medio)) contactErrors.push('contacto_entrevista_medio');
+      if (isEmpty(contacto_entrevista_dato)) contactErrors.push('contacto_entrevista_dato');
+      setFieldErrors(prev => [...prev, ...contactErrors]);
+      alert('Debe completar los datos de la persona de contacto para la entrevista.');
+      setCurrentStep(4);
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    // 5. Paso 5: Situación socioeconómica
+    if (isEmpty(data.ficha.situacion_socioeconomica)) {
+      setFieldErrors(['situacion_socioeconomica']);
+      alert('Debe completar la situación socioeconómica.');
+      setCurrentStep(5);
+      window.scrollTo(0, 0);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!terminosAceptados) {
       setError('Debe aceptar los términos y condiciones para enviar la ficha.');
+      return;
+    }
+
+    if (!validateAllSteps()) {
       return;
     }
 
@@ -440,6 +583,7 @@ const FormularioIngreso = () => {
       const payload = {
         ...data,
         escolaridad: data.escolaridad.filter(e => (e.escuela?.trim() || '') !== '' || (e.anio_cursado?.trim() || '') !== ''),
+        hermanos: data.hermanos.filter(h => (h.nombre_apellido?.trim() || '') !== '' || (h.vinculo?.trim() || '') !== ''),
         padres: data.padres.map(p => ({
             ...p,
             rol: p.rol === 'Otro' ? p.rol_otro : p.rol
