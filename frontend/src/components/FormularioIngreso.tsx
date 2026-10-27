@@ -582,9 +582,24 @@ const FormularioIngreso = () => {
     try {
       const payload = {
         ...data,
+        ficha: {
+          ...data.ficha,
+          discapacidad: data.ficha.posee_discapacidad === true 
+            ? (data.ficha.discapacidad?.trim() || '') 
+            : 'No posee',
+          tiene_cud: data.ficha.posee_discapacidad === true 
+            ? (data.ficha.tiene_cud === true) 
+            : false,
+          problemas_aprendizaje: data.ficha.tiene_problemas_aprendizaje === true 
+            ? (data.ficha.problemas_aprendizaje?.trim() || '') 
+            : '',
+          tratamiento_detalles: data.ficha.tratamiento_profesional === true 
+            ? (data.ficha.tratamiento_detalles?.trim() || '') 
+            : ''
+        },
         escolaridad: data.escolaridad.filter(e => (e.escuela?.trim() || '') !== '' || (e.anio_cursado?.trim() || '') !== ''),
-        hermanos: data.hermanos.filter(h => (h.nombre_apellido?.trim() || '') !== '' || (h.vinculo?.trim() || '') !== ''),
-        padres: data.padres.map(p => ({
+        hermanos: data.hermanos.filter(h => (h.nombre_apellido?.trim() || '') !== '' || (h.vinculo?.trim() || '') !== '').map(h => ({ ...h, vinculo: h.vinculo === 'Otro' ? (h.vinculo_otro?.trim() || 'Otro') : h.vinculo })),
+        padres: data.padres.filter(p => (p.apellido?.trim() || '') !== '' || (p.nombre?.trim() || '') !== '' || (p.dni_nro?.trim() || '') !== '').map(p => ({
             ...p,
             rol: p.rol === 'Otro' ? p.rol_otro : p.rol
         }))

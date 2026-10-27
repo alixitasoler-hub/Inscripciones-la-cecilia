@@ -171,7 +171,7 @@ const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const Campo = ({ label, value }: { label: string; value?: string | number | null }) => (
-  <div style={{ marginBottom: '1rem' }}>
+  <div style={{ marginBottom: '1rem' }} className="campo-item">
     <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem', letterSpacing: '0.05em' }}>
       {label}
     </div>
@@ -182,9 +182,9 @@ const Campo = ({ label, value }: { label: string; value?: string | number | null
 );
 
 const Seccion = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
-  <div style={{ marginBottom: '2rem' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '2px solid var(--border-color)' }} className="Seccion-title">
-      <div style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.4rem', borderRadius: '8px', display: 'flex' }}>
+  <div style={{ marginBottom: '2rem' }} className="ficha-seccion">
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '2px solid var(--border-color)' }} className="seccion-title">
+      <div style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '0.4rem', borderRadius: '8px', display: 'flex' }} className="no-print">
         {icon}
       </div>
       <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--secondary)' }}>{title}</h3>
@@ -194,7 +194,7 @@ const Seccion = ({ title, icon, children }: { title: string; icon: React.ReactNo
 );
 
 const Grid = ({ cols = 3, children }: { cols?: number; children: React.ReactNode }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '0 2rem' }}>
+  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols === 2 ? '0 2rem' : '0 1.5rem' }} className={`ficha-grid ficha-grid-${cols}`}>
     {children}
   </div>
 );
@@ -297,11 +297,14 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
   const validParents = padres.filter((p: any) => p.nombre || p.apellido || p.dni_nro);
   const hasSecondParent = validParents.length > 1;
 
+  // Lógica defensiva para verificar posesión de discapacidad declarada
+  const tieneDiscapacidad = ficha.discapacidad && ficha.discapacidad !== 'No posee' && ficha.discapacidad !== 'No';
+
   return (
     <>
       {/* Estilos de impresión y visibilidad */}
       <style>{`
-        /* Ocultar el acuerdo en pantalla por defecto sin removerlo del árbol de renderizado para evitar problemas de paginación al imprimir */
+        /* Ocultar el acuerdo en pantalla por defecto sin removerlo del árbol de renderizado */
         .acuerdo-admision {
           position: absolute;
           left: -9999px;
@@ -312,23 +315,36 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
         }
 
         @media print {
-          /* Mostrar el acuerdo únicamente al imprimir */
-          .acuerdo-admision {
-            position: static !important;
-            width: auto !important;
-            height: auto !important;
-            overflow: visible !important;
-            display: block !important;
-            page-break-before: always;
-            border-top: none !important;
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-            font-size: 7.2pt !important;
-            line-height: 1.25 !important;
-            color: #000 !important;
+          @page {
+            size: A4 portrait;
+            margin: 10mm 12mm !important;
           }
 
-          /* Ocultar botones, sidebars, perfiles y controles de navegación */
+          /* Desactivar animaciones y transformaciones para evitar capas cortadas o superposiciones */
+          *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+            box-shadow: none !important;
+          }
+
+          /* Asegurar visibilidad y expansión total sin overflow:hidden */
+          html, body, #root, .v2-layout, .v2-content, .ficha-detalle-container, .main-content {
+            overflow: visible !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            background: white !important;
+            color: black !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            font-size: 8.5pt !important;
+            line-height: 1.3 !important;
+          }
+
+          /* Ocultar elementos de navegación y UI administrativa */
           .no-print, 
           [class*="no-print"], 
           button, 
@@ -342,93 +358,150 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             margin: 0 !important; 
             opacity: 0 !important; 
           }
-          
-          .v2-layout { display: block !important; }
-          .v2-content { max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; }
-          
-          /* Margen de página estándar profesional */
-          @page {
-            size: A4;
-            margin: 12mm 15mm !important;
-          }
-          
-          body { 
-            background: white !important; 
-            color: black !important; 
-            font-family: sans-serif; 
-            font-size: 8.5pt !important; 
-            line-height: 1.3 !important;
-            padding: 0 !important;
-          }
-          
-          .ficha-detalle-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-          .ficha-detalle-container > div { padding: 0 !important; border: none !important; box-shadow: none !important; background: transparent !important; }
-          
-          .ficha-detalle-container > div:first-of-type {
-            padding: 0.5rem 0.75rem !important;
-            margin-bottom: 0.75rem !important;
+
+          /* Encabezado de la Ficha en papel */
+          .ficha-header-card {
             background: #f8fafc !important;
-            color: black !important;
-            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 6px !important;
+            padding: 0.6rem 0.85rem !important;
+            margin-bottom: 0.85rem !important;
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
-          .ficha-detalle-container > div:first-of-type img {
-            height: 40px !important;
-            width: 40px !important;
+          .ficha-header-card img {
+            height: 44px !important;
+            width: 44px !important;
+            border: 1px solid #cbd5e1 !important;
           }
-          .ficha-detalle-container > div:first-of-type h1 {
-            font-size: 1.2rem !important;
-            color: black !important;
+          .ficha-header-card h1 {
+            font-size: 1.25rem !important;
+            color: #0f172a !important;
             margin: 0 !important;
           }
-          
-          div[style*="gridTemplateColumns"] {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.35rem 0.75rem !important;
+
+          /* Contenedor del cuerpo */
+          .ficha-body-card {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
           }
-          
-          div[style*="marginBottom: '2rem'"] {
-            margin-bottom: 0.75rem !important;
+
+          /* Secciones y títulos */
+          .ficha-seccion {
+            margin-bottom: 0.85rem !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
-          
-          /* Control de viudas y huérfanas en párrafos, listados y tablas */
-          p, li, tr, table {
-            orphans: 3 !important;
-            widows: 3 !important;
-          }
-          h1, h2, h3, h4, h5, h6, .Seccion-title {
+          .seccion-title {
+            margin-bottom: 0.45rem !important;
+            padding-bottom: 0.35rem !important;
+            border-bottom: 1.5px solid #cbd5e1 !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
+          }
+          .seccion-title h3 {
+            font-size: 9.5pt !important;
+            color: #0f172a !important;
+          }
+
+          /* Tarjeta individual de adulto */
+          .padre-card {
+            background: #fafafa !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            padding: 0.75rem 1rem !important;
+            margin-bottom: 0.65rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
 
-          /* Evitar que se rompan las secciones de campos a la mitad */
-          div[style*="marginBottom: '2rem'"], .Seccion-title + div {
+          /* Grids en impresión */
+          .ficha-grid-3 {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.3rem 0.75rem !important;
+          }
+          .ficha-grid-2 {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.3rem 0.75rem !important;
+          }
+          .campo-item {
+            margin-bottom: 0.35rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
-          
+          .campo-item > div:first-child {
+            font-size: 6.2pt !important;
+            color: #64748b !important;
+            margin-bottom: 0.1rem !important;
+          }
+          .campo-item > div:last-child {
+            font-size: 8.5pt !important;
+            color: #000 !important;
+          }
+
+          /* Tablas */
+          table, tr, td, th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          table {
+            font-size: 7.8pt !important;
+          }
+          th, td {
+            padding: 0.3rem 0.5rem !important;
+          }
+
+          /* Control de viudas y huérfanas */
+          p, li, tr, table {
+            orphans: 3 !important;
+            widows: 3 !important;
+          }
+          h1, h2, h3, h4, h5, h6 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+
+          /* Acuerdo de Admisión (Hoja dedicada limpia) */
+          .acuerdo-admision {
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            display: block !important;
+            page-break-before: always !important;
+            break-before: page !important;
+            font-size: 7pt !important;
+            line-height: 1.25 !important;
+            color: #000 !important;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            border-top: none !important;
+          }
           .acuerdo-admision h2 {
             font-size: 9.5pt !important;
             font-weight: 800 !important;
-            margin-bottom: 0.4rem !important;
+            margin-bottom: 0.35rem !important;
             color: #000 !important;
             text-align: center !important;
           }
           .acuerdo-admision h4 {
-            font-size: 7.5pt !important;
+            font-size: 7.2pt !important;
             font-weight: 800 !important;
-            margin-top: 0.3rem !important;
+            margin-top: 0.25rem !important;
             margin-bottom: 0.05rem !important;
             color: #000 !important;
           }
           .acuerdo-admision p {
-            margin-bottom: 0.18rem !important;
+            margin-bottom: 0.16rem !important;
             text-align: justify !important;
           }
           
@@ -438,14 +511,25 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           }
           
           .firmas-block {
-            margin-top: 4.5rem !important;
-            gap: 2.5rem 2rem !important;
+            margin-top: 1.5rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
-          .firmas-block div {
+          .firmas-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 1.5rem 2rem !important;
+          }
+          .firma-box {
+            text-align: center !important;
+            padding-top: 2.25rem !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+          }
+          .firma-linea {
+            border-top: 1px solid #000 !important;
+            width: 80% !important;
+            margin: 0 auto 0.25rem !important;
           }
         }
       `}</style>
@@ -483,7 +567,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
         </div>
 
         {/* Encabezado de la ficha con Logo de la Escuela */}
-        <div style={{ background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius-lg)', padding: '2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="ficha-header-card" style={{ background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius-lg)', padding: '2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <img src="/logo.png" alt="Escuela La Cecilia" style={{ height: '70px', width: '70px', objectFit: 'contain', borderRadius: '8px', border: '2px solid white', backgroundColor: 'white', padding: '2px' }} />
             <div>
@@ -494,7 +578,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 {ficha.apellido}, {ficha.nombre}
               </h1>
               <div style={{ marginTop: '0.5rem', opacity: 0.85 }}>
-                DNI {ficha.dni_tipo} {ficha.dni_nro} · {ficha.nivel_ingreso} — {ficha.grado_anio}
+                {ficha.dni_tipo || 'DNI'} {ficha.dni_nro} · {ficha.nivel_ingreso} — {ficha.grado_anio}
               </div>
             </div>
           </div>
@@ -513,7 +597,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
         </div>
 
         {/* Cuerpo de la ficha */}
-        <div style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '2.5rem', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="ficha-body-card" style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '2.5rem', boxShadow: 'var(--shadow-sm)' }}>
 
           {/* Datos del Alumno */}
           <Seccion title="Datos del Alumno" icon={<User size={16} />}>
@@ -521,7 +605,8 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
               <Grid cols={3}>
                 <InputEdit campo="nombre" label="Nombre" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="apellido" label="Apellido" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="dni_nro" label="DNI Nro" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="dni_tipo" label="Tipo DNI" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="dni_nro" label="Número Documento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="sexo" label="Sexo" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="fecha_nac" label="Fecha de Nacimiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="lugar_nac" label="Lugar de Nacimiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
@@ -530,16 +615,13 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <InputEdit campo="provincia" label="Provincia" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="pais" label="País" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="cp" label="Código Postal" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="telefono_alumno" label="Teléfono Alumno" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="email_alumno" label="Email Alumno" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="obra_social" label="Obra Social" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="otras_actividades" label="Otras Actividades" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="otras_actividades" label="Intereses y Actividades Extracurriculares" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
                 <Campo label="Nombre" value={ficha.nombre} />
                 <Campo label="Apellido" value={ficha.apellido} />
-                <Campo label="DNI" value={`${ficha.dni_tipo || ''} ${ficha.dni_nro || ''}`} />
+                <Campo label="Documento" value={`${ficha.dni_tipo || 'DNI'} ${ficha.dni_nro || ''}`} />
                 <Campo label="Sexo" value={ficha.sexo} />
                 <Campo label="Fecha de Nacimiento" value={ficha.fecha_nac} />
                 <Campo label="Lugar de Nacimiento" value={ficha.lugar_nac} />
@@ -548,10 +630,10 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <Campo label="Provincia" value={ficha.provincia} />
                 <Campo label="País" value={ficha.pais} />
                 <Campo label="Código Postal" value={ficha.cp} />
-                <Campo label="Teléfono" value={ficha.telefono_alumno} />
-                <Campo label="Email" value={ficha.email_alumno} />
-                <Campo label="Obra Social" value={ficha.obra_social} />
-                <Campo label="Otras Actividades" value={ficha.otras_actividades} />
+                <Campo label="Intereses / Actividades Extracurriculares" value={ficha.otras_actividades} />
+                {ficha.telefono_alumno && <Campo label="Teléfono Alumno" value={ficha.telefono_alumno} />}
+                {ficha.email_alumno && <Campo label="Email Alumno" value={ficha.email_alumno} />}
+                {ficha.obra_social && <Campo label="Obra Social" value={ficha.obra_social} />}
               </Grid>
             )}
           </Seccion>
@@ -563,8 +645,8 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <InputEdit campo="nivel_ingreso" label="Nivel de Ingreso" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="grado_anio" label="Grado / Año" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="ciclo_lectivo" label="Ciclo Lectivo" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="repitente" label="Repitente (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="motivo_eleccion" label="Motivo de Elección" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="repitente" label="Repitente (1: Sí / 0: No)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="motivo_eleccion" label="¿Cómo conocieron la Escuela? / Elección" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
@@ -572,13 +654,13 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <Campo label="Grado / Año" value={ficha.grado_anio} />
                 <Campo label="Ciclo Lectivo" value={ficha.ciclo_lectivo} />
                 <Campo label="Repitente" value={ficha.repitente ? 'Sí' : 'No'} />
-                <Campo label="Motivo de Elección" value={ficha.motivo_eleccion} />
+                <Campo label="¿Cómo conocieron la Escuela? / Elección" value={ficha.motivo_eleccion} />
               </Grid>
             )}
 
             {escolaridad.length > 0 && (
               <div style={{ marginTop: '1.5rem' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Historial Escolar</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Historial Escolar Previo</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
@@ -603,62 +685,72 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           </Seccion>
 
           {/* Salud */}
-          <Seccion title="Salud" icon={<Heart size={16} />}>
+          <Seccion title="Salud y Actividades Médicas" icon={<Heart size={16} />}>
             {editando ? (
               <Grid cols={2}>
-                <InputEdit campo="salud_detalles" label="Detalles de Salud / Ind. Médica" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="salud_detalles" label="Información Médica Relevante" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="embarazo_parto" label="Embarazo / Parto (de la madre)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="discapacidad" label="Discapacidad" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="tiene_cud" label="Tiene CUD (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="tiene_problemas_aprendizaje" label="¿Problemas de aprendizaje? (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="discapacidad" label="Discapacidad ('No posee' o detalle)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tiene_cud" label="Tiene CUD (1: Sí / 0: No)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tiene_problemas_aprendizaje" label="¿Problemas de aprendizaje? (1: Sí / 0: No)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="problemas_aprendizaje" label="Especifique problemas de aprendizaje" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="tratamiento_profesional" label="¿Tratado por profesionales? (si/no)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="tratamiento_profesional" label="¿Tratado por profesionales? (1: Sí / 0: No)" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="tratamiento_detalles" label="Especifique tratamiento" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={2}>
-                <Campo label="Detalles de Salud / Ind. Médica" value={ficha.salud_detalles} />
+                <Campo label="Información Médica Relevante" value={ficha.salud_detalles} />
                 <Campo label="Embarazo / Parto (de la madre)" value={ficha.embarazo_parto} />
-                <Campo label="Discapacidad" value={ficha.discapacidad} />
-                <Campo label="Tiene CUD" value={ficha.tiene_cud ? 'Sí' : 'No'} />
+                <Campo 
+                  label="¿Posee discapacidad?" 
+                  value={tieneDiscapacidad ? 'Sí' : 'No'} 
+                />
+                {tieneDiscapacidad ? (
+                  <>
+                    <Campo label="Discapacidad Especificada" value={ficha.discapacidad} />
+                    <Campo label="Posee CUD" value={ficha.tiene_cud ? 'Sí' : 'No'} />
+                  </>
+                ) : null}
                 <Campo label="¿Tiene problemas de aprendizaje?" value={ficha.tiene_problemas_aprendizaje ? 'Sí' : 'No'} />
-                <div className={!ficha.tiene_problemas_aprendizaje ? "no-print" : ""}>
+                {(!!ficha.tiene_problemas_aprendizaje || ficha.problemas_aprendizaje) ? (
                   <Campo label="Especifique problemas de aprendizaje" value={ficha.problemas_aprendizaje} />
-                </div>
+                ) : null}
                 <Campo label="¿Está siendo tratado por profesionales?" value={ficha.tratamiento_profesional ? 'Sí' : 'No'} />
-                <div className={!ficha.tratamiento_profesional ? "no-print" : ""}>
+                {(!!ficha.tratamiento_profesional || ficha.tratamiento_detalles) ? (
                   <Campo label="Especifique tratamiento" value={ficha.tratamiento_detalles} />
-                </div>
+                ) : null}
               </Grid>
             )}
           </Seccion>
 
           {/* Padres / Tutores */}
           {validParents.length > 0 && (
-            <Seccion title="Padres / Tutores" icon={<Users size={16} />}>
+            <Seccion title="Padres / Tutores / Responsables" icon={<Users size={16} />}>
               {validParents.map((p: any, i: number) => (
-                <div key={i} style={{ background: '#f8fafc', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1rem' }}>{p.rol || `Contacto ${i + 1}`}</div>
+                <div key={i} className="padre-card" style={{ background: '#f8fafc', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '0.05em' }}>
+                    {p.rol || `Adulto Responsable ${i + 1}`}
+                  </div>
                   <Grid cols={3}>
-                    <Campo label="Nombre" value={`${p.apellido || ''}, ${p.nombre || ''}`} />
+                    <Campo label="Nombre y Apellido" value={`${p.apellido || ''}, ${p.nombre || ''}`.replace(/^,\s*|,\s*$/g, '')} />
                     <Campo label="DNI" value={p.dni_nro} />
                     <Campo label="Fecha de Nacimiento" value={p.fecha_nac} />
-                    <Campo label="Lugar de Nacimiento" value={p.lugar_nac_datos} />
                     <Campo label="Estado Civil" value={p.estado_civil} />
                     <Campo label="Celular" value={p.celular} />
-                    <Campo label="Teléfono Fijo" value={p.telefono_casa} />
                     <Campo label="Email" value={p.email} />
-                    <Campo label="WhatsApp" value={p.whatsapp_contacto ? 'Sí' : 'No'} />
                     <Campo label="Dirección" value={p.direccion} />
                     <Campo label="Localidad" value={p.localidad} />
                     <Campo label="Provincia" value={p.provincia} />
                     <Campo label="País" value={p.pais} />
                     <Campo label="Código Postal" value={p.cp} />
-                    <Campo label="Profesión" value={p.profesion_ocupacion} />
-                    <Campo label="Empresa" value={p.empresa_laboral} />
-                    <Campo label="Dirección Laboral" value={p.direccion_laboral} />
-                    <Campo label="Tel. Laboral" value={p.telefono_laboral} />
-                    <Campo label="Horarios" value={p.horarios_laborales} />
+                    <Campo label="Profesión / Ocupación" value={p.profesion_ocupacion} />
+                    <Campo label="Lugar de Trabajo" value={p.empresa_laboral} />
+                    <Campo label="Ubicación del Trabajo" value={p.direccion_laboral} />
+                    <Campo label="Teléfono Laboral" value={p.telefono_laboral} />
+                    <Campo label="Horarios Laborales" value={p.horarios_laborales} />
+                    {p.telefono_casa && <Campo label="Teléfono Fijo" value={p.telefono_casa} />}
+                    {p.lugar_nac_datos && <Campo label="Lugar de Nacimiento" value={p.lugar_nac_datos} />}
+                    {p.whatsapp_contacto ? <Campo label="WhatsApp de Contacto" value="Sí" /> : null}
                   </Grid>
                 </div>
               ))}
@@ -667,11 +759,11 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
 
           {/* Hermanos */}
           {hermanos.length > 0 && (
-            <Seccion title="Hermanos / Familiares" icon={<Users size={16} />}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <Seccion title="Composición Familiar (Hermanos / Convivientes)" icon={<Users size={16} />}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }} className="tabla-familia">
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
-                    {['Vínculo', 'Nombre y Apellido', 'DNI', 'Fecha Nac.', 'Estado Civil', 'Estudios / Escuela'].map(h => (
+                    {['Vínculo', 'Nombre y Apellido', 'Fecha Nac.', 'Institución / Escuela (Hermanos)'].map(h => (
                       <th key={h} style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>{h}</th>
                     ))}
                   </tr>
@@ -679,12 +771,10 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 <tbody>
                   {hermanos.map((h: any, i: number) => (
                     <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '0.5rem 1rem' }}>{h.vinculo}</td>
+                      <td style={{ padding: '0.5rem 1rem', fontWeight: 600 }}>{h.vinculo}</td>
                       <td style={{ padding: '0.5rem 1rem', fontWeight: 600 }}>{h.nombre_apellido}</td>
-                      <td style={{ padding: '0.5rem 1rem' }}>{h.dni_nro}</td>
-                      <td style={{ padding: '0.5rem 1rem' }}>{h.fecha_nac}</td>
-                      <td style={{ padding: '0.5rem 1rem' }}>{h.estado_civil}</td>
-                      <td style={{ padding: '0.5rem 1rem' }}>{h.estudios_escuela}</td>
+                      <td style={{ padding: '0.5rem 1rem' }}>{h.fecha_nac || '—'}</td>
+                      <td style={{ padding: '0.5rem 1rem' }}>{h.estudios_escuela || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -692,9 +782,9 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             </Seccion>
           )}
 
-          {/* Convivientes */}
+          {/* Convivientes (si existieran registros previos independientes) */}
           {convivientes.length > 0 && (
-            <Seccion title="Grupo Conviviente" icon={<Home size={16} />}>
+            <Seccion title="Grupo Conviviente Adicional" icon={<Home size={16} />}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
@@ -718,26 +808,26 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
           )}
 
           {/* Contacto para entrevista y observaciones */}
-          <Seccion title="Información Administrativa" icon={<User size={16} />}>
+          <Seccion title="Información Administrativa y Contacto" icon={<User size={16} />}>
             {editando ? (
               <Grid cols={3}>
                 <InputEdit campo="contacto_entrevista_nombre" label="Contacto Entrevista - Nombre" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="contacto_entrevista_medio" label="Contacto Entrevista - Medio" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="contacto_entrevista_dato" label="Contacto Entrevista - Dato" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="contacto_entrevista_dato" label="Contacto Entrevista - Dato / Destino" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
                 <InputEdit campo="situacion_socioeconomica" label="Situación Socioeconómica" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
-                <InputEdit campo="otros_datos" label="Otros Datos" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
+                <InputEdit campo="otros_datos" label="Observaciones Adicionales" fichaEdit={fichaEdit} setFichaEdit={setFichaEdit} />
               </Grid>
             ) : (
               <Grid cols={3}>
-                <Campo label="Contacto - Nombre" value={ficha.contacto_entrevista_nombre} />
-                <Campo label="Contacto - Medio" value={ficha.contacto_entrevista_medio} />
-                <Campo label="Contacto - Dato" value={ficha.contacto_entrevista_dato} />
+                <Campo label="Contacto Entrevista - Nombre" value={ficha.contacto_entrevista_nombre} />
+                <Campo label="Contacto Entrevista - Medio" value={ficha.contacto_entrevista_medio} />
+                <Campo label="Contacto Entrevista - Dato / Destino" value={ficha.contacto_entrevista_dato} />
                 <Campo label="Situación Socioeconómica" value={ficha.situacion_socioeconomica} />
-                <Campo label="Otros Datos" value={ficha.otros_datos} />
+                <Campo label="Observaciones Adicionales" value={ficha.otros_datos} />
               </Grid>
             )}
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Observaciones Generales</div>
+            <div style={{ marginTop: '1rem' }} className={!ficha.observaciones_generales && !editando ? "no-print" : ""}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Observaciones Administrativas Internas</div>
               {editando ? (
                 <textarea
                   className="form-textarea"
@@ -748,7 +838,7 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
                 />
               ) : (
                 <p style={{ fontSize: '0.9rem', lineHeight: '1.7', color: 'var(--text-main)', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', margin: 0 }}>
-                  {ficha.observaciones_generales || <span style={{ color: '#CBD5E1', fontStyle: 'italic' }}>Sin observaciones</span>}
+                  {ficha.observaciones_generales || <span style={{ color: '#CBD5E1', fontStyle: 'italic' }}>Sin observaciones internas</span>}
                 </p>
               )}
             </div>
@@ -785,83 +875,85 @@ const FichaDetalle: React.FC<FichaDetalleProps> = ({ token, onAuthError }) => {
             </Seccion>
           </div>
 
-          {/* Acuerdo de Admisión y Permanencia (Completo en la vista de impresión) */}
-          <div className="acuerdo-admision" style={{ marginTop: '3rem', borderTop: '2px dashed var(--border-color)', paddingTop: '2.5rem' }}>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--secondary)' }}>ACUERDO DE ADMISIÓN Y PERMANENCIA</h2>
+          {/* Acuerdo de Admisión y Permanencia (Hoja dedicada en vista de impresión) */}
+          <div className="acuerdo-admision">
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              <h2>ACUERDO DE ADMISIÓN Y PERMANENCIA</h2>
             </div>
-            <div style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--text-main)', textAlign: 'justify' }}>
+            <div>
               <p>Las familias, alumnos y alumnas pueden informarse sobre la filosofía y los fundamentos de la Escuela, así como conocer las condiciones generales que se expresan en documentos tales como “Propósitos de la Escuela”, “Principios de la Escuela”, “Manual de Bienvenida” y “Manual de Procedimientos”, de modo que exista una elección consciente al momento de solicitar la inscripción, contando siempre con la posibilidad de efectuar las consultas que consideren necesarias.</p>
               <p>No se considera que exista un alumno o alumna fuera y otro u otra dentro de la Escuela, por lo cual se espera una conducta coherente del alumnado con los principios de la misma, en cualquier ámbito en que se encuentren.</p>
               <p>La Escuela tiene la intención de crear las condiciones para que los niños, niñas y jóvenes que asisten a ella puedan desarrollarse en libertad, lo cual requiere comprender la trama del condicionamiento genético, cultural y psicológico que determina nuestras acciones. No hay libertad mientras los pensamientos, emociones y acciones están dictados por las modas, las presiones sociales, las ideologías, los dogmas de cualquier tipo, nuestras huellas psicológicas, todo lo cual constituye nuestro “yo”. La libertad -entendida como libertad de la actividad egocéntrica- nos permite ser personas atentas y reflexivas, lo que posibilita una amistosa convivencia, un armonioso desarrollo en sociedad y una vida libre de conflicto interno. Es en estos principios que se basa el núcleo de nuestros propósitos educativos y al cual se remiten las siguientes condiciones que los alumnos, alumnas y familias deben comprender y aceptar para su ingreso y permanencia en la escuela.</p>
               
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ADMISIÓN</h4>
+              <h4>ADMISIÓN</h4>
               <p>La Escuela “La Cecilia” es un proyecto que propone una educación en libertad. En tal sentido, el ingreso implica conocer y acordar con sus principios. Será necesario para la admisión que potenciales ingresantes y sus familias muestren interés en los fundamentos de la Escuela y acepten estas condiciones. Siendo un proyecto educativo que requiere un marco de aceptación y coherencia en la vida familiar, se pretende que todos los hermanos o hermanas en edad escolar asistan a esta escuela, salvo circunstancias particulares que se analizarán en cada caso.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>BUEN TRATO</h4>
+              <h4>BUEN TRATO</h4>
               <p>No se permitirá ningún tipo de trato violento, físico ni verbal, como burlas, discriminación, bullying, etc. tanto dentro como fuera de la Escuela. Estas conductas serán informadas y conversadas con las familias y se exigirán seguimientos en cada caso.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>EXPECTATIVAS ACADÉMICAS</h4>
+              <h4>EXPECTATIVAS ACADÉMICAS</h4>
               <p>Las familias, alumnos y alumnas deben comprender y aceptar que no resulta lógico ni posible que todos lleguen a los mismos resultados en sus aprendizajes académicos, ya que ello dependerá de sus intereses y capacidades. El propósito educativo de la Escuela es colaborar para que cada alumno o alumna pueda conocerse a sí mismo, conocer sus intereses y capacidades y desarrollarlos de la mejor manera, para poder hacer de ellos un medio de vida dentro de un proyecto vital con sentido social. Para los propósitos enunciados se les brindarán las opciones académicas correspondientes y el apoyo necesario. Los alumnos y alumnas podrán elegir las actividades que realizan y proponer otras que no se estén realizando. En todos los casos la tutoría de la Escuela, junto a educadores, hará un seguimiento de cada alumno o alumna, para lo cual se llevará un registro detallado de las actividades.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>MODO DE VIDA - ALIMENTACIÓN</h4>
+              <h4>MODO DE VIDA - ALIMENTACIÓN</h4>
               <p>La Escuela propone un modo de vida que contribuya a la salud física y psicológica. Se propone una dieta vegetariana y natural que excluye las carnes de todo tipo y sus derivados, bebidas alcohólicas, gaseosas y golosinas, así como otros alimentos con exceso de dulces o de sal. Tanto en el predio de la Escuela como durante salidas, reuniones, actividades escolares o cualquier otra actividad donde participen grupalmente los alumnos y alumnas se respetará la alimentación vegetariana y los hábitos propuestos. El cumplimiento de esta dieta no es de exigencia en el hogar, pero se solicita a las familias que colaboren para que sus hijos o hijas adopten conscientemente una forma de vida que contribuya a cuidar su salud. En el mismo sentido, no se deben ingresar a la escuela alimentos que no respondan a las pautas de cuidado de la salud que se recomiendan.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CIGARRILLO, ALCOHOL, DROGAS</h4>
+              <h4>CIGARRILLO, ALCOHOL, DROGAS</h4>
               <p>Se consideran dañinos para la salud el tabaco, alcohol u otras drogas, por lo cual alumnos y alumnas deben comprometerse a no consumirlos en ningún momento, dentro o fuera de la escuela. Se solicita a las familias que colaboren para que sus hijos o hijas no se conviertan en consumidores de estos elementos perjudiciales para la salud y generadores de tantos trastornos sociales.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>ACCESORIOS</h4>
+              <h4>ACCESORIOS</h4>
               <p>Hay jóvenes que suelen utilizar accesorios (algunos tipos de piercings, muñequeras, cadenas, expansores, etc.) que implican un riesgo para la seguridad y salud propia y de sus compañeros o compañeras, pero además son representativos de condicionamientos sobre los que la Escuela está fuertemente interesada en trabajar. Por lo tanto, los alumnos y alumnas convendrán no usar accesorios que no sean consensuados con la escuela y la familia, dentro ni fuera de ella. No obstante, se podrán revisar estas restricciones en todo momento a través de los mecanismos orgánicos colectivos disponibles, tales como las Asambleas.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>BOLICHES, VIDA NOCTURNA</h4>
+              <h4>BOLICHES, VIDA NOCTURNA</h4>
               <p>Los alumnos y alumnas de la Escuela se comprometerán a no asistir a pubs, boliches o lugares similares, ya que no son ambientes convenientes para adolescentes, ni son acordes a la forma de vida propuesta.</p>
 
-              <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>HORARIO Y ASISTENCIA</h4>
+              <h4>HORARIO Y ASISTENCIA</h4>
               <p>La Escuela considera imprescindible que alumnos y alumnas participen con regularidad y puntualidad a las actividades de la vida escolar. Se evitarán las inasistencias reiteradas y las reincorporaciones que deban gestionarse -con motivo de alcanzar la cantidad de faltas permitidas por el reglamento- se autorizarán solamente en caso de que estén debidamente justificadas por enfermedad u otras circunstancias graves que las ameriten.</p>
 
               <div className="evitar-quiebre">
-                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>SANCIONES</h4>
+                <h4>SANCIONES</h4>
                 <p>No se utiliza un sistema de premios ni castigos, por lo cual tampoco hay sanciones para regular los comportamientos y la vida de la Escuela. Esto requiere que alumnos y alumnas sepan auto-gestionar su conducta dentro de los canales existentes y respetando los propósitos y fundamentos expuestos. Dado que la firma de los presentes compromisos determina la posibilidad del ingreso, la falta de cumplimiento de estos acuerdos significará que el alumno o la alumna deberá dejar la Escuela de inmediato, en cualquier momento del año o no acceder a la reinscripción para el año siguiente.</p>
               </div>
 
               <div className="evitar-quiebre">
-                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUMPLIMIENTO COMPROMISO ECONÓMICO</h4>
+                <h4>CUMPLIMIENTO COMPROMISO ECONÓMICO</h4>
                 <p>Las familias se comprometen a abonar en tiempo y forma las cuotas. De existir algún inconveniente para el pago de las mismas, esto se comunicará inmediatamente a la Escuela, a fin de encontrar alguna alternativa para hacer frente a la situación. Si existiese una deuda de dos cuotas vencidas y no se acordase una forma de cumplimiento, la familia se compromete a pedir el pase y dejar la escuela en el momento en que se le solicite. Las cuotas pagadas fuera de término conllevarán un recargo. No se reinscribirán alumnos ni alumnas que mantengan deuda con la Escuela al comienzo del ciclo lectivo.</p>
               </div>
 
               <div className="evitar-quiebre">
-                <h4 style={{ fontWeight: 800, marginTop: '1rem', color: 'var(--secondary)' }}>CUOTAS</h4>
+                <h4>CUOTAS</h4>
                 <p>Se abonan 12 cuotas al año, 2 de las cuales corresponden a matrícula (que deben estar pagas antes del finalizar el año previo al ciclo lectivo en que se inscribe el alumno) y luego 10 cuotas consecutivas, de marzo a diciembre del ciclo en que se inscribe. Las cuotas se ajustan periódicamente en forma proporcional a los aumentos en los salarios docentes y sus valores pueden consultarse en la página de la Escuela.</p>
               </div>
             </div>
 
             {/* Bloques de Firmas */}
-            <div className="evitar-quiebre firmas-block" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem 3rem' }}>
-              <div style={{ textAlign: 'center', paddingTop: '5rem', gridColumn: hasSecondParent ? 'auto' : 'span 2' }}>
-                <div style={{ borderTop: '1px solid #000', width: hasSecondParent ? '80%' : '40%', margin: '0 auto 0.5rem' }}></div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
-              </div>
-              {hasSecondParent && (
-                <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
-                  <div style={{ borderTop: '1px solid #000', width: '80%', margin: '0 auto 0.5rem' }}></div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+            <div className="evitar-quiebre firmas-block">
+              <div className="firmas-grid">
+                <div className="firma-box" style={{ gridColumn: hasSecondParent ? 'auto' : 'span 2' }}>
+                  <div className="firma-linea" style={{ width: hasSecondParent ? '80%' : '40%' }}></div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 1</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B' }}>Aclaración: ________________________</div>
                 </div>
-              )}
-              <div style={{ textAlign: 'center', gridColumn: 'span 2', marginTop: '1rem', paddingTop: '5rem' }}>
-                <div style={{ borderTop: '1px solid #000', width: '40%', margin: '0 auto 0.5rem' }}></div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Alumno/a</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Aclaración: ________________________</div>
+                {hasSecondParent && (
+                  <div className="firma-box">
+                    <div className="firma-linea"></div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Adulto Responsable 2</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B' }}>Aclaración: ________________________</div>
+                  </div>
+                )}
+                <div className="firma-box" style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
+                  <div className="firma-linea" style={{ width: '40%' }}></div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Firma del Alumno/a</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B' }}>Aclaración: ________________________</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}} className="no-print">
-            <button className="btn btn-primary" style={{padding:'0.75rem'}} onClick={() => navigate('/admin')}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }} className="no-print">
+            <button className="btn btn-primary" style={{ padding: '0.75rem' }} onClick={() => navigate('/admin')}>
               Ver Ficha Completa
             </button>
-            <button className="btn btn-outline" style={{padding:'0.75rem'}} onClick={() => navigate('/admin/agenda', { state: { selectFichaId: Number(id) } })}>
+            <button className="btn btn-outline" style={{ padding: '0.75rem' }} onClick={() => navigate('/admin/agenda', { state: { selectFichaId: Number(id) } })}>
               <Calendar size={18} /> Programar Entrevista
             </button>
           </div>

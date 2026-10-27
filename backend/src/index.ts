@@ -23,6 +23,8 @@ const jsonResponse = (data: any, status = 200) => {
   });
 };
 
+const cleanBind = (stmt: any, ...args: any[]) => stmt.bind(...args.map(v => v === undefined ? null : v));
+
 const generateSignature = async (text: string, secret: string) => {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -127,8 +129,6 @@ export default {
         if (!padres || padres.length === 0 || !padres[0].apellido?.trim() || !padres[0].nombre?.trim()) {
           return jsonResponse({ error: 'Debe ingresar al menos un adulto responsable con nombre y apellido.' }, 400);
         }
-        
-        const cleanBind = (stmt: any, ...args: any[]) => stmt.bind(...args.map(v => v === undefined ? null : v));
 
         const resFicha = await cleanBind(env.DB.prepare(`
           INSERT INTO fichas (
@@ -360,8 +360,10 @@ export default {
             if (padres) {
               batch.push(env.DB.prepare('DELETE FROM padres_tutores WHERE ficha_id = ?').bind(id));
               padres.forEach((p: any) => {
-                batch.push(env.DB.prepare('INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, email, profesion_ocupacion, empresa_laboral, direccion_laboral, telefono_laboral, horarios_laborales) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                  .bind(id, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.email, p.profesion_ocupacion, p.empresa_laboral, p.direccion_laboral, p.telefono_laboral, p.horarios_laborales));
+                batch.push(cleanBind(env.DB.prepare(`
+                  INSERT INTO padres_tutores (ficha_id, rol, apellido, nombre, dni_nro, estado_civil, fecha_nac, lugar_nac_datos, direccion, localidad, provincia, pais, cp, telefono_casa, celular, whatsapp_contacto, email, profesion_ocupacion, empresa_laboral, direccion_laboral, telefono_laboral, horarios_laborales)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                `), id, p.rol, p.apellido, p.nombre, p.dni_nro, p.estado_civil, p.fecha_nac, p.lugar_nac_datos, p.direccion, p.localidad, p.provincia, p.pais, p.cp, p.telefono_casa, p.celular, p.whatsapp_contacto ? 1 : 0, p.email, p.profesion_ocupacion, p.empresa_laboral, p.direccion_laboral, p.telefono_laboral, p.horarios_laborales));
               });
             }
 

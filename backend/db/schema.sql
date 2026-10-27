@@ -97,6 +97,7 @@ CREATE TABLE padres_tutores (
   email TEXT,
   profesion_ocupacion TEXT,
   empresa_laboral TEXT,
+  direccion_laboral TEXT,
   telefono_laboral TEXT,
   horarios_laborales TEXT,
   FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE

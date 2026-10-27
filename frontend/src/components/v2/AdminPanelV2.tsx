@@ -157,6 +157,32 @@ const AdminPanelV2: React.FC<AdminPanelV2Props> = ({ onAuthError, user, children
           font-weight: 800;
           text-transform: uppercase;
         }
+
+        @media print {
+          .v2-layout {
+            display: block !important;
+            grid-template-columns: none !important;
+            min-height: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            border-radius: 0 !important;
+          }
+          .v2-sidebar {
+            display: none !important;
+          }
+          .v2-content {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: transparent !important;
+          }
+        }
       `}</style>
 
       <aside className="v2-sidebar">
