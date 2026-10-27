@@ -35,15 +35,52 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
   const [fichas, setFichas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeStage, setActiveStage] = useState('all');
+  const [activeStage, setActiveStage] = useState('pendiente');
+  const [stageCounts, setStageCounts] = useState<{ [key: string]: number }>({
+    all: 0,
+    pendiente: 0,
+    entrevista_programada: 0,
+    entrevistado_pendiente: 0,
+    finalizado: 0,
+    cancelado: 0
+  });
   const [filterLevel, setFilterLevel] = useState('');
   const [selectedFichaId, setSelectedFichaId] = useState<number | null>(null);
   
   // const navigate = useNavigate();
 
-  const fetchFichas = async () => {
+  const fetchCounts = async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/fichas`, { 
+      const res = await fetch(`${API_URL}/admin/fichas/counts`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (res.status === 401) {
+        onAuthError();
+        return;
+      }
+      if (res.ok) {
+        const counts = await res.json();
+        setStageCounts({
+          all: Number(counts.total || 0),
+          pendiente: Number(counts.pendiente || 0),
+          entrevista_programada: Number(counts.entrevista_programada || 0),
+          entrevistado_pendiente: Number(counts.entrevistado_pendiente || 0),
+          finalizado: Number(counts.finalizado || 0),
+          cancelado: Number(counts.cancelado || 0)
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching stage counts:', e);
+    }
+  };
+
+  const fetchFichas = async (stageToFetch?: string) => {
+    const targetStage = stageToFetch !== undefined ? stageToFetch : activeStage;
+    try {
+      setLoading(true);
+      const queryParam = targetStage && targetStage !== 'all' ? `?estado=${encodeURIComponent(targetStage)}` : '';
+      const res = await fetch(`${API_URL}/admin/fichas${queryParam}`, { 
         headers: { 'Authorization': `Bearer ${token}` },
         cache: 'no-store'
       });
@@ -70,7 +107,20 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
     }
   };
 
-  useEffect(() => { fetchFichas(); }, [token]);
+  const handleStageSelect = (stageId: string) => {
+    setActiveStage(stageId);
+    fetchFichas(stageId);
+  };
+
+  const handleRefresh = () => {
+    fetchFichas(activeStage);
+    fetchCounts();
+  };
+
+  useEffect(() => { 
+    fetchFichas('pendiente');
+    fetchCounts();
+  }, [token]);
 
   const filteredFichas = useMemo(() => {
     return fichas.filter(f => {
@@ -78,7 +128,9 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
       const matchLevel = filterLevel ? f.nivel_ingreso === filterLevel : true;
       const status = f.estado || 'pendiente';
       const matchStage = activeStage === 'all' ? true : 
-                         (activeStage === 'pendiente' ? (status === 'pendiente' || status === 'contactado') : status === activeStage);
+                         (activeStage === 'pendiente' ? (status === 'pendiente' || status === 'contactado') : 
+                          activeStage === 'finalizado' ? (status === 'finalizado' || status === 'admitido' || f.decision_final === 'ingresa') :
+                          status === activeStage);
       return matchSearch && matchLevel && matchStage;
     });
   }, [fichas, search, filterLevel, activeStage]);
@@ -317,7 +369,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
           <button 
             key={s.id} 
             className={`stage-tab ${activeStage === s.id ? 'active' : ''}`}
-            onClick={() => setActiveStage(s.id)}
+            onClick={() => handleStageSelect(s.id)}
           >
             {s.id === 'all' && <Filter size={16} />}
             {s.id === 'pendiente' && <Clock size={16} />}
@@ -327,9 +379,10 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
             {s.id === 'cancelado' && <XCircle size={16} />}
             {s.title}
             <span className="stage-count">
-               {s.id === 'all' ? fichas.length : 
+              {stageCounts[s.id] ?? (s.id === 'all' ? fichas.length : 
                 s.id === 'pendiente' ? fichas.filter(f => (f.estado || 'pendiente') === 'pendiente' || f.estado === 'contactado').length :
-                fichas.filter(f => (f.estado || 'pendiente') === s.id).length}
+                s.id === 'finalizado' ? fichas.filter(f => (f.estado || 'pendiente') === 'finalizado' || f.estado === 'admitido' || f.decision_final === 'ingresa').length :
+                fichas.filter(f => (f.estado || 'pendiente') === s.id).length)}
             </span>
           </button>
         ))}
@@ -415,7 +468,7 @@ const KanbanBoard: React.FC<PipelineProps> = ({ token, onAuthError }) => {
           id={selectedFichaId} 
           token={token} 
           onClose={() => setSelectedFichaId(null)} 
-          onUpdate={fetchFichas}
+          onUpdate={handleRefresh}
           onAuthError={onAuthError}
         />
       )}

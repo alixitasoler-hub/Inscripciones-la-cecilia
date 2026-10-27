@@ -266,13 +266,43 @@ export default {
 
         const currentUser = await getUserIdFromAuth(request, env);
         if (!currentUser) return jsonResponse({ error: 'No autorizado' }, 401);
+
+        if (path === '/api/admin/fichas/counts' && request.method === 'GET') {
+          const counts = await env.DB.prepare(`
+            SELECT 
+              COUNT(*) as total,
+              SUM(CASE WHEN LOWER(COALESCE(estado, 'pendiente')) IN ('pendiente', 'contactado') THEN 1 ELSE 0 END) as pendiente,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) = 'entrevista_programada' THEN 1 ELSE 0 END) as entrevista_programada,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) = 'entrevistado_pendiente' THEN 1 ELSE 0 END) as entrevistado_pendiente,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) IN ('finalizado', 'admitido') OR LOWER(COALESCE(decision_final, '')) IN ('ingresa', 'admitido') THEN 1 ELSE 0 END) as finalizado,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) = 'cancelado' THEN 1 ELSE 0 END) as cancelado
+            FROM fichas
+          `).first();
+          return jsonResponse(counts || {});
+        }
+
         if (path === '/api/admin/fichas' && request.method === 'GET') {
-          const { results } = await env.DB.prepare(`
+          const estado = url.searchParams.get('estado');
+          let query = `
             SELECT f.*, 
               (SELECT MIN(fecha_hora) FROM entrevistas WHERE ficha_id = f.id AND estado != 'cancelada' AND fecha_hora >= CURRENT_TIMESTAMP) as proxima_entrevista
-            FROM fichas f 
-            ORDER BY f.fecha_solicitud DESC
-          `).all();
+            FROM fichas f
+          `;
+          const params: any[] = [];
+          if (estado && estado !== 'all') {
+            if (estado === 'pendiente') {
+              query += ` WHERE (LOWER(COALESCE(f.estado, 'pendiente')) IN ('pendiente', 'contactado'))`;
+            } else if (estado === 'finalizado') {
+              query += ` WHERE (LOWER(COALESCE(f.estado, '')) IN ('finalizado', 'admitido') OR LOWER(COALESCE(f.decision_final, '')) IN ('ingresa', 'admitido'))`;
+            } else {
+              query += ` WHERE LOWER(COALESCE(f.estado, '')) = ?`;
+              params.push(estado.toLowerCase());
+            }
+          }
+          query += ` ORDER BY f.fecha_solicitud DESC`;
+
+          const stmt = env.DB.prepare(query);
+          const { results } = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
           return jsonResponse(results);
         }
         if (path.startsWith('/api/admin/fichas/') && request.method === 'GET') {
@@ -328,6 +358,9 @@ export default {
 
           // Caso 1: Actualización simple (solo campos de ficha)
           if (!body.ficha && !body.escolaridad) {
+            if (body.estado === 'finalizado' && !body.decision_final) {
+              body.decision_final = 'ingresa';
+            }
             const keys = Object.keys(body).filter(k => k !== 'id');
             if (keys.length > 0) {
               const isFullEdit = keys.some(k => !['estado', 'decision_final', 'observaciones_generales'].includes(k));
@@ -343,6 +376,9 @@ export default {
             const { ficha, escolaridad, padres, hermanos, convivientes } = body;
             
             if (ficha) {
+              if (ficha.estado === 'finalizado' && !ficha.decision_final) {
+                ficha.decision_final = 'ingresa';
+              }
               const keys = Object.keys(ficha).filter(k => k !== 'id' && k !== 'id_str');
               const setClause = keys.map(k => `${k} = ?`).join(', ');
               const values = keys.map(k => ficha[k]);
@@ -411,11 +447,22 @@ export default {
             SELECT 
               nivel_ingreso,
               COUNT(*) as total,
-              SUM(CASE WHEN decision_final = 'ingresa' THEN 1 ELSE 0 END) as concretados
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) IN ('finalizado', 'admitido') OR LOWER(COALESCE(decision_final, '')) IN ('ingresa', 'admitido') THEN 1 ELSE 0 END) as concretados
             FROM fichas 
             WHERE fecha_solicitud >= ? AND fecha_solicitud <= ?
             GROUP BY nivel_ingreso
           `).bind(from, to).all();
+
+          const summary = await env.DB.prepare(`
+            SELECT 
+              COUNT(*) as total,
+              SUM(CASE WHEN LOWER(COALESCE(estado, 'pendiente')) IN ('pendiente', 'contactado') THEN 1 ELSE 0 END) as pendientes,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) = 'entrevista_programada' THEN 1 ELSE 0 END) as entrevistas,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) IN ('finalizado', 'admitido') OR LOWER(COALESCE(decision_final, '')) IN ('ingresa', 'admitido') THEN 1 ELSE 0 END) as admitidos,
+              SUM(CASE WHEN LOWER(COALESCE(estado, '')) = 'cancelado' THEN 1 ELSE 0 END) as cancelados
+            FROM fichas
+            WHERE fecha_solicitud >= ? AND fecha_solicitud <= ?
+          `).bind(from, to).first();
 
           const history = await env.DB.prepare(`
             SELECT h.*, u.nombre as usuario_nombre, f.apellido || ', ' || f.nombre as ficha_nombre
@@ -425,7 +472,7 @@ export default {
             ORDER BY h.fecha DESC LIMIT 100
           `).all();
 
-          return jsonResponse({ stats: stats.results, history: history.results });
+          return jsonResponse({ stats: stats.results, summary: summary || {}, history: history.results });
         }
         if (path.startsWith('/api/admin/entrevistas/') && request.method === 'PUT') {
           const id = path.split('/').filter(Boolean).pop();

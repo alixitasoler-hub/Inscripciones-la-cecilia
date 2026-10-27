@@ -40,6 +40,13 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
           { nivel_ingreso: 'EPO (Primaria)', total: 60, concretados: 50 },
           { nivel_ingreso: 'ESO (Secundaria)', total: 35, concretados: 20 }
         ],
+        summary: {
+          total: 140,
+          pendientes: 25,
+          entrevistas: 15,
+          admitidos: 100,
+          cancelados: 0
+        },
         history: [
           { id: 1, fecha: new Date().toISOString(), usuario_nombre: 'Directora', accion: 'Actualización de Ficha', ficha_nombre: 'Pérez, Sofía' }
         ]
@@ -88,7 +95,9 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
     return <div style={{textAlign:'center', padding:'5rem'}}>Cargando información del sistema...</div>;
   }
 
-  const totalSolicitudes = data.stats.reduce((acc: number, s: any) => acc + s.total, 0);
+  const totalSolicitudes = data.summary?.total !== undefined ? Number(data.summary.total) : data.stats.reduce((acc: number, s: any) => acc + (Number(s.total) || 0), 0);
+  const totalAdmitidos = data.summary?.admitidos !== undefined ? Number(data.summary.admitidos) : data.stats.reduce((acc: number, s: any) => acc + (Number(s.concretados) || 0), 0);
+  const totalPendientes = data.summary?.pendientes !== undefined ? Number(data.summary.pendientes) : 0;
 
   return (
     <div className="metrics-container animate-in">
@@ -214,15 +223,19 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
           <div className="stat-value" style={{fontSize:'1.5rem'}}>{totalSolicitudes}</div>
         </div>
         <div className="stat-card" style={{padding:'1rem'}}>
-          <div className="stat-label"><CheckCircle size={12} /> Total Ingresos</div>
+          <div className="stat-label"><Clock size={12} /> Nuevos / Pendientes</div>
+          <div className="stat-value" style={{fontSize:'1.5rem', color:'#64748B'}}>{totalPendientes}</div>
+        </div>
+        <div className="stat-card" style={{padding:'1rem'}}>
+          <div className="stat-label"><CheckCircle size={12} /> Alumnos Admitidos</div>
           <div className="stat-value" style={{fontSize:'1.5rem', color:'#10B981'}}>
-            {data.stats.reduce((acc: number, s: any) => acc + s.concretados, 0)}
+            {totalAdmitidos}
           </div>
         </div>
         <div className="stat-card" style={{padding:'1rem'}}>
           <div className="stat-label"><TrendingUp size={12} /> Efectividad Proceso</div>
           <div className="stat-value" style={{fontSize:'1.5rem', color:'var(--accent)'}}>
-            {totalSolicitudes > 0 ? Math.round((data.stats.reduce((acc: number, s: any) => acc + s.concretados, 0) / totalSolicitudes) * 100) : 0}%
+            {totalSolicitudes > 0 ? Math.round((totalAdmitidos / totalSolicitudes) * 100) : 0}%
           </div>
         </div>
       </div>
@@ -255,7 +268,7 @@ const MetricsDashboard: React.FC<MetricsProps> = ({ token, onAuthError }) => {
               <span style={{fontSize:'1rem'}}>
                 <strong style={{color:'var(--primary)'}}>{totalSolicitudes}</strong>
                 <span style={{color:'var(--text-muted)', margin:'0 0.4rem'}}>/</span>
-                <strong style={{color:'#10B981'}}>{data.stats.reduce((acc: number, s: any) => acc + s.concretados, 0)}</strong>
+                <strong style={{color:'#10B981'}}>{totalAdmitidos}</strong>
               </span>
             </div>
           </div>
